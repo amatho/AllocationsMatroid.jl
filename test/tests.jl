@@ -1,7 +1,7 @@
 import JuMP
 using Allocations
 using Graphs
-using Random: seed!
+using Random: seed!, randperm
 using Test
 
 # For utilities tests:
@@ -9,6 +9,9 @@ using Allocations: bipartite_matching, lex_optimize!
 
 # For Counts test:
 using Allocations: Category
+
+# For Matroids test:
+using Allocations: set_to_bits, bits_to_set, add_el, matroid_partition_knuth73, find_shortest_path, exchange_graph
 
 
 function runtests(; slow_tests = true)
@@ -944,6 +947,133 @@ end
 
     end
 
+end
+
+@testset "Matroids" begin
+    @testset "GraphicMatroid properties" begin
+        G = smallgraph(:karate)
+        M = GraphicMatroid(G)
+
+        @test rank(M) == 33
+        @test rank(M, []) == 0
+        @test is_indep(M, [1,2,3])
+        @test is_indep(M, [1,2,16])
+        @test is_indep(M, [1,2,17]) == false
+        @test is_closed(M, 1:50) == false
+        @test is_closed(M, 1:78) == false
+
+        # situation encountered during manual testing:
+        g = SimpleGraph{Int64}(64, [[9, 10, 11, 12, 13, 14, 15, 16], [9, 10, 11, 12, 13, 14], [9, 10, 11, 12, 13, 14], [9, 10, 11, 16], [9, 10, 11, 12, 13, 14, 15, 16], [9], [9, 10, 12, 14, 15, 16], [9, 10, 11], [1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15], [1, 2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 14, 15], [1, 2, 3, 4, 5, 8, 9, 10, 12, 13, 14, 15], [1, 2, 3, 5, 7, 9, 10, 11, 13, 15, 16], [1, 2, 3, 5, 9, 10, 11, 12, 16], [1, 2, 3, 5, 7, 9, 10, 11, 15, 16], [1, 5, 7, 9, 10, 11, 12, 14, 16], [1, 4, 5, 7, 12, 13, 14, 15]])
+        m = GraphicMatroid(g)
+        A = Set([64, 61, 55, 29, 52, 12, 37, 19, 4, 6, 13, 45])
+
+        for e in [33,41,21]
+            @test is_indep(m, A ∪ e)
+        end
+    end
+
+    @testset "UniformMatroid properties" begin
+        U = UniformMatroid(10, 6)
+        F = FreeMatroid(10)
+        Z = ZeroMatroid(10)
+
+        @test is_indep(U, 0)
+        @test is_indep(F, 0)
+        @test is_indep(Z, 0)
+        @test rank(U) == 6
+        @test rank(F) == 10
+        @test rank(Z) == 0
+
+        for i in 1:5
+            S = randperm(10)[1:i]
+            @test is_indep(U, S) || S
+            @test is_indep(F, S) || S
+            @test is_indep(Z, S) == false || S
+
+            @test is_circuit(U, S) == false || S
+            @test is_circuit(F, S) == false || S
+            @test is_circuit(Z, S) == (i == 1) || S
+
+            @test rank(U, S) == i || S
+            @test rank(F, S) == i || S
+            @test rank(Z, S) == 0 || S
+
+            @test closure(U, S) == S || S
+            @test closure(F, S) == S || S
+            @test closure(Z, S) == Set(1:10) || S
+        end
+
+        S = randperm(10)[1:6]
+        @test is_indep(U, S) == true || S
+        @test is_circuit(U, S) == false|| S
+        @test rank(U, S) == 6 || S
+        @test closure(U, S) == Set(1:10) || S
+
+        S = randperm(10)[1:7]
+        @test is_indep(U, S) == false || S
+        @test is_circuit(U, S) || S
+        @test rank(U, S) == 6 || S
+        @test closure(U, S) == Set(1:10) || S
+
+        
+        for i in 8:10
+            S = randperm(10)[1:i]
+            @test is_indep(U, S) == false || S
+            @test is_circuit(U, S) == false || S
+            @test rank(U, S) == 6 || S
+            @test closure(U, S) == Set(1:10) || S
+        end
+    end
+
+    @testset "bitset utils" begin
+        @test set_to_bits([1,3,4]) == 0b00001101
+        @test bits_to_set(0x16c) == Set([3,4,6,7,9])
+
+        @test [3,4,6,7,9] |> set_to_bits |> bits_to_set == Set([3,4,6,7,9])
+        @test Set([3,4,6,7,9]) |> set_to_bits |> bits_to_set == Set([3,4,6,7,9])
+
+        @test add_el(0b001, 2) == 0b101
+    end
+
+    @testset "Exchange graphs and transfer paths" begin
+        # Every agent likes every item.
+        matroids = [FreeMatroid(5) for _ in 1:5]
+        
+        # Every agent has 1 item.
+        A = Allocation(5,5)
+        for i in 1:5
+            give!(A, i, i)
+        end
+
+        # Every item should be exchangeable with every other item.
+        @test exchange_graph(matroids, A) == complete_digraph(5)
+
+        # Zachary's Karate Club.
+        k = smallgraph(:karate)
+        @test find_shortest_path(k, [1], [16]) |> length == 4
+        @test find_shortest_path(k, [1,2,3], [1,18,4]) == [1]
+
+        # A graph with no edges has no transfer paths.
+        g = SimpleGraph(10, 0)
+        @test find_shortest_path(g, [1,2,3], [4,5,6]) === nothing
+        @test find_shortest_path(g, [1,2,3,4], [4,5]) == [4]
+
+
+        # Three small matroids that require some transfers on the exchange
+        # graph to get a partition of the ground set.
+
+        # The ground set:       E = [1       2       3       4       5]
+        g1 = SimpleGraph{Int64}(5, [[2, 3], [1, 3], [1, 2], [4],    [5]])
+        g2 = SimpleGraph{Int64}(5, [[1],    [3, 4], [2, 4], [2, 3], [5]])
+        g3 = SimpleGraph{Int64}(5, [[1],    [2],    [4, 5], [3, 5], [3, 4]])
+
+        ms = [GraphicMatroid(g1), GraphicMatroid(g2), GraphicMatroid(g3)]
+
+        (partition, junk) = matroid_partition_knuth73(ms)
+        for (i, set) in enumerate(partition)
+            @test is_indep(ms[i], set) || "set $set not indep in ms[$i]"
+        end
+    end
 end
 
 return nothing
