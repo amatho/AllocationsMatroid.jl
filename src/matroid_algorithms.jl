@@ -1,7 +1,3 @@
-using Graphs
-using Random
-using Allocations
-
 function bv_to_bundle(bv::BitVector)
   return Set([i for (i,j) in enumerate(bv) if j == 1])
 end

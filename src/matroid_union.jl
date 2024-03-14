@@ -1,6 +1,5 @@
-using Graphs
 using DataStructures
-using Allocations
+
 
 """
 Constructs an exchange graph over `m` matroids (E, I_i) and `n` subsets
@@ -32,7 +31,6 @@ function exchange_graph(Ms::Vector{T}, A::Allocation; all_indep=true) where T <:
 
   return D
 end
-
 
 
 """

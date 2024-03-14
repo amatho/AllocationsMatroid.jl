@@ -1,14 +1,4 @@
-using Test
-using Random
-# using Graphs
-
-# @testset "bfs" begin
-#   # Zachary's karate club
-#   karate = smallgraph(:karate)
-#   @test bfs(karate, 1, x -> x==18) == [1,18]
-#   @test bfs(karate, 1, x->x==34) |> length == 3
-#   @test bfs(karate, 1, x->x==16) == [1,3,33,16]
-# end
+# TODO: Move these test to test.jl
 
 @testset "ClosedSetsMatroid properties" begin
   # The example from Knuth (1974) section 3.
@@ -80,79 +70,4 @@ end
   @test minimal_spanning_subset(M, 2^n-1) in B
   @test minimal_spanning_subsets(M, UInt16(2^n-1)) == B
   @test bases(M) == B
-end
-
-@testset "UniformMatroid properties" begin
-  U = UniformMatroid(10, 6)
-  F = FreeMatroid(10)
-  Z = ZeroMatroid(10)
-
-  @test is_indep(U, 0)
-  @test is_indep(F, 0)
-  @test is_indep(Z, 0)
-  @test rank(U) == 6
-  @test rank(F) == 10
-  @test rank(Z) == 0
-
-  for i in 1:5
-    S = randperm(10)[1:i]
-    @test is_indep(U, S) || S
-    @test is_indep(F, S) || S
-    @test is_indep(Z, S) == false || S
-
-    @test is_circuit(U, S) == false || S
-    @test is_circuit(F, S) == false || S
-    @test is_circuit(Z, S) == (i == 1) || S
-
-    @test rank(U, S) == i || S
-    @test rank(F, S) == i || S
-    @test rank(Z, S) == 0 || S
-
-    @test closure(U, S) == S || S
-    @test closure(F, S) == S || S
-    @test closure(Z, S) == Set(1:10) || S
-  end
-
-  S = randperm(10)[1:6]
-  @test is_indep(U, S) == true || S
-  @test is_circuit(U, S) == false|| S
-  @test rank(U, S) == 6 || S
-  @test closure(U, S) == Set(1:10) || S
-
-  S = randperm(10)[1:7]
-  @test is_indep(U, S) == false || S
-  @test is_circuit(U, S) || S
-  @test rank(U, S) == 6 || S
-  @test closure(U, S) == Set(1:10) || S
-
-  
-  for i in 8:10
-    S = randperm(10)[1:i]
-    @test is_indep(U, S) == false || S
-    @test is_circuit(U, S) == false || S
-    @test rank(U, S) == 6 || S
-    @test closure(U, S) == Set(1:10) || S
-  end
-end
-
-@testset "GraphicMatroid properties" begin
-  G = smallgraph(:karate)
-  M = GraphicMatroid(G)
-
-  @test rank(M) == 33
-  @test rank(M, []) == 0
-  @test is_indep(M, [1,2,3])
-  @test is_indep(M, [1,2,16])
-  @test is_indep(M, [1,2,17]) == false
-  @test is_closed(M, 1:50) == false
-  @test is_closed(M, 1:78) == false
-
-  # situation encountered during manual testing:
-  g = SimpleGraph{Int64}(64, [[9, 10, 11, 12, 13, 14, 15, 16], [9, 10, 11, 12, 13, 14], [9, 10, 11, 12, 13, 14], [9, 10, 11, 16], [9, 10, 11, 12, 13, 14, 15, 16], [9], [9, 10, 12, 14, 15, 16], [9, 10, 11], [1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15], [1, 2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 14, 15], [1, 2, 3, 4, 5, 8, 9, 10, 12, 13, 14, 15], [1, 2, 3, 5, 7, 9, 10, 11, 13, 15, 16], [1, 2, 3, 5, 9, 10, 11, 12, 16], [1, 2, 3, 5, 7, 9, 10, 11, 15, 16], [1, 5, 7, 9, 10, 11, 12, 14, 16], [1, 4, 5, 7, 12, 13, 14, 15]])
-  m = GraphicMatroid(g)
-  A = Set([64, 61, 55, 29, 52, 12, 37, 19, 4, 6, 13, 45])
-
-  for e in [33,41,21]
-    @test is_indep(m, A ∪ e)
-  end
 end

@@ -1,8 +1,3 @@
-using  Allocations
-import Allocations: check_ef_, check_ef, check_ef1, check_efx
-
-## CHECKS ###########################################################
-
 function m_check_ef_(V, A, value_; indep=false)
   N = agents(V)
 

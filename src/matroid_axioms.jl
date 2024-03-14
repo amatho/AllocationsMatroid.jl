@@ -5,7 +5,7 @@ Tests for the axioms for the closed sets of a matroid, as given by Knuth (1974).
 """
 The ground set is closed. E ∈ F.
 """
-function c1(m)
+function matroid_c1(m)
   @assert last(m.F) == Set(big"2"^m.n-1)
 end
 
@@ -13,7 +13,7 @@ end
 The intersection of two closed sets is a closed set. 
 If A, B ∈ F, then A ∩ B ∈ F.
 """
-function c2(m)
+function matroid_c2(m)
   F = reduce(∪, m.F)
   for A ∈ F for B ∈ F
     @assert A & B ∈ F "$A ∩ $B = ∉ F"
@@ -23,7 +23,7 @@ end
 """
 If A ∈ F and a, b ∈ E - A, then b is a member of all sets containing A ∪ {a} if and only if a is a member of all sets containing A ∪ {b}.
 """ 
-function c3(m)
+function matorid_c3(m)
   E = m.Type(big"2"^m.n-1)
   F = reduce(∪, m.F)
   for A ∈ setdiff(F, 0)
