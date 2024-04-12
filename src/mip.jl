@@ -72,6 +72,9 @@ function init_mip(V::Additive, solver;
         @constraint(model, sum(A[i, g] for i in N) <= hi)
     end
 
+    # Callbacks to be registered for lazy constraints
+    model[:callbacks] = Function[]
+
     return MIPContext(V, A, model, solver)
 
 end
@@ -96,6 +99,10 @@ init_mip(V::Matrix, solver; kwds...) = init_mip(Additive(V), solver; kwds...)
 # MIPContext.
 # ϵ: https://www.gurobi.com/documentation/9.1/refman/intfeastol.html
 function solve_mip(ctx; ϵ=1e-5, check=nothing)
+
+    if length(ctx.model[:callbacks]) != 0
+        set_attribute(ctx.model, MOI.LazyConstraintCallback(), cb_data -> lazy_constraint_callback(cb_data, ctx))
+    end
 
     if isempty(ctx.objectives)
         optimize!(ctx.model)
@@ -356,6 +363,46 @@ enforce(C::Permitted, i, j) = function(ctx)
 end
 
 
+# Enforce no lazy constraint on the JuMP model.
+enforce_lazy(C::Nothing) = identity
+
+
+# Enforce a matroid constraint lazily.
+enforce_lazy(C::MatroidConstraint) = function(ctx)
+    callback = function (cb_data, ctx)
+        if callback_node_status(cb_data, ctx.model) != MOI.CALLBACK_NODE_STATUS_INTEGER
+            return
+        end
+
+        V, A, model = ctx.profile, ctx.alloc_var, ctx.model
+        M = C.matroid
+        alloc = [Set() for _ in agents(V)]
+        ϵ = 1e-5
+
+        for i in agents(V), g in items(V)
+            val = callback_value(cb_data, A[i, g])
+            @assert val <= ϵ || val >= 1 - ϵ
+            val >= 1.0 - ϵ && push!(alloc[i], g)
+        end
+
+        for B in alloc
+            if !is_indep(M, B)
+                bundle_rank = rank(M, B)
+
+                for i in agents(V)
+                    con = @build_constraint(sum(A[i, g] for g in B) <= bundle_rank)
+                    MOI.submit(model, MOI.LazyConstraint(cb_data), con)
+                end
+            end
+        end
+    end
+
+    push!(ctx.model[:callbacks], callback)
+
+    return ctx
+end
+
+
 # Enforce envy-freeness up to a single object (EF1) on the JuMP model.
 function enforce_ef1(ctx)
 
@@ -433,6 +480,15 @@ function enforce_efx(ctx)
 
     return ctx
 
+end
+
+
+# The "master" lazy constraint callback method that runs each registered
+# callback.
+function lazy_constraint_callback(cb_data, ctx)
+    for f in ctx.model[:callbacks]
+        f(cb_data, ctx)
+    end
 end
 
 
