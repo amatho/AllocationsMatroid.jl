@@ -920,6 +920,20 @@ end
 Symmetry(::Type{<:Required}) = Asymmetric()
 
 
+"""
+    struct MatroidConstraint <: Constraint
+
+A constrained defined by a matroid. An allocation satisfies the matroid
+constraint if every bundle is independent in the given matroid.
+
+$ASYM_DOC
+"""
+struct MatroidConstraint <: Constraint
+    matroid::Matroid
+end
+Symmetry(::Type{<:MatroidConstraint}) = Symmetric()
+
+
 ## Reductions ################################################################
 
 
