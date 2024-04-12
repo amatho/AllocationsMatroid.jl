@@ -12,6 +12,7 @@ export
     FullMatroid,
     GraphicMatroid,
     Matroid,
+    MatroidConstraint,
     MatroidRank,
     OrderedCategory,
     Permitted,

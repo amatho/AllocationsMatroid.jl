@@ -5,7 +5,8 @@ import Base: reduce
 
 import JuMP
 using JuMP: Model, optimizer_with_attributes, objective_value, @variable,
-            @objective, @constraint, delete, fix, optimize!, termination_status,
+            @objective, @constraint, @build_constraint, delete, fix, optimize!,
+            termination_status, set_attribute, callback_node_status, callback_value,
             MOI
 using Graphs
 using HiGHS
@@ -16,7 +17,6 @@ include("conf.jl")
 include("matroids.jl")
 include("types.jl")
 include("util.jl")
-include("bitset_utils.jl")
 include("checks.jl")
 include("matroid_algorithms.jl")
 include("matroid_axioms.jl")
