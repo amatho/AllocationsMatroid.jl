@@ -45,8 +45,8 @@ FreeMatroid(n) = UniformMatroid(n, n)
 ZeroMatroid(n) = UniformMatroid(n, 0)
 
 
-ground_set(M::ClosedSetsMatroid) = bits_to_set(2^M.n - 1)
-ground_set(M::FullMatroid) = bits_to_set(2^M.n - 1)
+ground_set(M::ClosedSetsMatroid) = Set(1:M.n)
+ground_set(M::FullMatroid) = Set(1:M.n)
 ground_set(M::UniformMatroid) = Set(1:M.n)
 ground_set(M::GraphicMatroid) = edges(M.g)
 
@@ -361,3 +361,15 @@ end
 
 
 is_closed(M::Matroid, S) = closure(M, S) == S
+
+function set_to_bits(S)
+  if length(S) == 0
+    return 0
+  end
+
+  reduce(+, (2^(x - 1) for x in S), init=0)
+end
+
+function bits_to_set(S::Integer)
+  Set(i for (i, c) in enumerate(reverse(bitstring(S))) if c == '1')
+end
