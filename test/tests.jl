@@ -14,7 +14,7 @@ using Allocations: Category
 using Allocations: Symmetry, Symmetric, Asymmetric, SymmetrizedConstraint
 
 # For Matroids test:
-using Allocations: set_to_bits, bits_to_set, add_el, matroid_partition_knuth73, find_shortest_path, exchange_graph
+using Allocations: matroid_partition_knuth73, find_shortest_path, exchange_graph
 
 
 function runtests(; slow_tests = true)
