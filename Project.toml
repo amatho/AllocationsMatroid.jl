@@ -4,7 +4,7 @@ authors = ["Magnus Lie Hetland <mlh@ntnu.no>", "Halvard Hummel <halvard.hummel@n
 version = "0.1.0"
 
 [deps]
-Allocations = "260a3f16-0ffa-4f23-875b-1350d3996fb5"
+AllocationInstances = "555b26a8-2a75-48c7-85b7-65ed21549184" # TODO: Remove when package is registered
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
