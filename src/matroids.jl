@@ -2,42 +2,42 @@ abstract type Matroid end
 
 
 struct ClosedSetsMatroid{T} <: Matroid
-  n::Integer # Size of universe
-  r::Integer # Final rank (r == length(F)).
-  F::Vector{Set{T}} # Closed sets by rank
-  rank::Dict{T,Integer} # Mapping from sets to rank.
-  Type::DataType
+    n::Integer # Size of universe
+    r::Integer # Final rank (r == length(F)).
+    F::Vector{Set{T}} # Closed sets by rank
+    rank::Dict{T,Integer} # Mapping from sets to rank.
+    Type::DataType
 end
 
 
 struct FullMatroid{T} <: Matroid
-  n::Integer
-  r::Integer
-  F::Vector{Set{T}} # Closed sets by rank
-  I::Vector{Set{T}} # Independent sets by rank
-  C::Set{T} # Circuits
-  rank::Dict{T,Integer}
-  Type::DataType
+    n::Integer
+    r::Integer
+    F::Vector{Set{T}} # Closed sets by rank
+    I::Vector{Set{T}} # Independent sets by rank
+    C::Set{T} # Circuits
+    rank::Dict{T,Integer}
+    Type::DataType
 end
 
 
 struct GraphicMatroid <: Matroid
-  g::Graph
-  n::Integer
-  r::Integer
-  GraphicMatroid(g::Graph) = new(g, ne(g), length(kruskal_mst(g)))
+    g::Graph
+    n::Integer
+    r::Integer
+    GraphicMatroid(g::Graph) = new(g, ne(g), length(kruskal_mst(g)))
 end
 
 
 struct UniformMatroid <: Matroid
-  n::Integer
-  r::Integer
+    n::Integer
+    r::Integer
 end
 
 
 struct PartitionMatroid <: Matroid
-  n::Integer
-  categories::Vector{UnitRange{Integer}}
+    n::Integer
+    categories::Vector{UnitRange{Integer}}
 end
 
 
@@ -65,19 +65,19 @@ function is_indep end
 Determines whether a given set S is independent in the matroid M, given by the closed sets of M grouped by rank. Uses (I.1) in Greene (1989).
 """
 function is_indep(M::ClosedSetsMatroid, S::Integer)
-  t = Base.count_ones(S)
+    t = Base.count_ones(S)
 
-  if t > length(M.F)
-    return false
-  end
-
-  for F in M.F[t]
-    if S & F == S
-      return false
+    if t > length(M.F)
+        return false
     end
-  end
 
-  return true
+    for F in M.F[t]
+        if S & F == S
+            return false
+        end
+    end
+
+    return true
 end
 
 
@@ -85,11 +85,11 @@ is_indep(M::ClosedSetsMatroid, S) = is_indep(M, set_to_bits(S))
 
 
 function is_indep(M::FullMatroid, S::Integer)
-  card = Base.count_ones(S)
-  if card + 1 > length(M.I)
-    return false
-  end
-  return S in M.I[card+1]
+    card = Base.count_ones(S)
+    if card + 1 > length(M.I)
+        return false
+    end
+    return S in M.I[card+1]
 end
 
 
@@ -101,9 +101,9 @@ is_indep(M::UniformMatroid, S::Integer) = is_indep(M, bits_to_set(S))
 
 
 function is_indep(m::GraphicMatroid, S)
-  edgelist = [e for (i, e) in enumerate(edges(m.g)) if i in S]
-  subgraph, _vmap = induced_subgraph(m.g, edgelist)
-  return !is_cyclic(subgraph)
+    edgelist = [e for (i, e) in enumerate(edges(m.g)) if i in S]
+    subgraph, _vmap = induced_subgraph(m.g, edgelist)
+    return !is_cyclic(subgraph)
 end
 
 
@@ -127,23 +127,23 @@ rank(M::Matroid) = M.r
 Rank ``oracle''. Returns the rank of the set S in the matroid M.
 """
 function rank(M::ClosedSetsMatroid, S::Integer)
-  for (r, Fr) in enumerate(M.F), B ∈ Fr
-    if S & B == S
-      return r - 1
+    for (r, Fr) in enumerate(M.F), B ∈ Fr
+        if S & B == S
+            return r - 1
+        end
     end
-  end
 end
 rank(M::ClosedSetsMatroid, S) = rank(M, set_to_bits(S))
 
 
 function rank(M::FullMatroid, S::Integer)
-  for (r, Fr) in enumerate(M.F)
-    for F ∈ Fr
-      if S & F == S
-        return r - 1
-      end
+    for (r, Fr) in enumerate(M.F)
+        for F ∈ Fr
+            if S & F == S
+                return r - 1
+            end
+        end
     end
-  end
 end
 rank(M::FullMatroid, S) = rank(M, set_to_bits(S))
 
@@ -178,23 +178,23 @@ function is_circuit end
 Determines whether a given set S is a circuit in the matroid M, given by the closed sets of M. Uses (C.1) and (C.2) in Greene (1989).
 """
 function is_circuit(M::ClosedSetsMatroid, S::Integer)
-  t = Base.count_ones(S)
+    t = Base.count_ones(S)
 
-  for F in M.F[t] # (C.1) S ⊆ F for some F ∈ F_{t-1}.
-    if S & F == S
-      @goto C2
+    for F in M.F[t] # (C.1) S ⊆ F for some F ∈ F_{t-1}.
+        if S & F == S
+            @goto C2
+        end
     end
-  end
-  return false
+    return false
 
-  @label C2
-  for F in M.F[t-1] # (C.2) |S ∩ F| ≤ r(F) for all F ∈ F_{t-2}.
-    if Base.count_ones(S & F) > t - 2
-      return false
+    @label C2
+    for F in M.F[t-1] # (C.2) |S ∩ F| ≤ r(F) for all F ∈ F_{t-2}.
+        if Base.count_ones(S & F) > t - 2
+            return false
+        end
     end
-  end
 
-  return true
+    return true
 end
 
 
@@ -207,7 +207,7 @@ is_circuit(M::UniformMatroid, S) = is_circuit(M, set_to_bits(S))
 
 
 function is_circuit(M::GraphicMatroid, S)
-  return rank(M, S) == length(S) - 1
+    return rank(M, S) == length(S) - 1
 end
 
 
@@ -233,18 +233,18 @@ minimal_spanning_subset(M::FullMatroid, A) = minimal_spanning_subset(M, set_to_b
 
 
 function _mss(M, j::Integer, Ā::Integer)
-  B = [Ā & F for F in M.F[j+1] if Base.count_ones(Ā & F) > j]
+    B = [Ā & F for F in M.F[j+1] if Base.count_ones(Ā & F) > j]
 
-  while length(B) == 0
-    if j >= Base.count_ones(Ā) - 1
-      return Ā
+    while length(B) == 0
+        if j >= Base.count_ones(Ā) - 1
+            return Ā
+        end
+
+        j += 1
+        B = [Ā & F for F in M.F[j+1] if Base.count_ones(Ā & F) > j]
     end
 
-    j += 1
-    B = [Ā & F for F in M.F[j+1] if Base.count_ones(Ā & F) > j]
-  end
-
-  _mss(M, j, Ā & ~rand_el(reduce(|, B)))
+    _mss(M, j, Ā & ~rand_el(reduce(|, B)))
 end
 
 
@@ -257,9 +257,9 @@ minimal_spanning_subset(M::UniformMatroid, S) = throw("unimplemented")
 Uses Kruskal's algorithm to find a minimal spanning tree over M.G.
 """
 function minimal_spanning_subset(M::GraphicMatroid, S)
-  edgelist = [e for (i, e) in enumerate(edges(M.g)) if i in S]
-  subgraph, _vmap = induced_subgraph(M.g, edgelist)
-  return kruskal_mst(subgraph)
+    edgelist = [e for (i, e) in enumerate(edges(M.g)) if i in S]
+    subgraph, _vmap = induced_subgraph(M.g, edgelist)
+    return kruskal_mst(subgraph)
 end
 
 
@@ -277,25 +277,25 @@ minimal_spanning_subsets(M::FullMatroid, A) = minimal_spanning_subsets(M, set_to
 
 
 function _mss_all(M, j::Integer, Ā::Integer)
-  B = [Ā & F for F in M.F[j+1] if Base.count_ones(Ā & F) > j]
+    B = [Ā & F for F in M.F[j+1] if Base.count_ones(Ā & F) > j]
 
-  while length(B) == 0
-    if j >= Base.count_ones(Ā) - 1
-      return Ā
+    while length(B) == 0
+        if j >= Base.count_ones(Ā) - 1
+            return Ā
+        end
+
+        j += 1
+        B = [Ā & F for F in M.F[j+1] if Base.count_ones(Ā & F) > j]
     end
 
-    j += 1
-    B = [Ā & F for F in M.F[j+1] if Base.count_ones(Ā & F) > j]
-  end
-
-  bases = Set()
-  t = reduce(|, B)
-  while t > 0
-    x = t & -t
-    bases = bases ∪ _mss_all(M, j, Ā & ~x)
-    t &= ~x
-  end
-  return bases
+    bases = Set()
+    t = reduce(|, B)
+    while t > 0
+        x = t & -t
+        bases = bases ∪ _mss_all(M, j, Ā & ~x)
+        t &= ~x
+    end
+    return bases
 end
 
 
@@ -328,23 +328,23 @@ function closure end
 
 
 function closure(M::ClosedSetsMatroid, S::Integer)
-  for Fr in M.F, B ∈ Fr
-    if S & B == S
-      return B
+    for Fr in M.F, B ∈ Fr
+        if S & B == S
+            return B
+        end
     end
-  end
 end
 closure(M::ClosedSetsMatroid, S) = closure(M, set_to_bits(S))
 
 
 function closure(M::FullMatroid, S::Integer)
-  for Fr in M.F
-    for B ∈ Fr
-      if S & B == S
-        return B
-      end
+    for Fr in M.F
+        for B ∈ Fr
+            if S & B == S
+                return B
+            end
+        end
     end
-  end
 end
 closure(M::FullMatroid, S) = closure(M, set_to_bits(S))
 
@@ -354,22 +354,24 @@ closure(M::UniformMatroid, S) = length(S) < M.r ? S : ground_set(M)
 
 
 function closure(M::GraphicMatroid, S)
-  edgelist = [e for (i, e) in enumerate(edges(M.g)) if i in S]
-  _sg, vmap = induced_subgraph(M.g, edgelist)
-  return [e for e in edges(M.g) if [e.src, e.dst] ⊆ vmap || e.src == e.dst]
+    edgelist = [e for (i, e) in enumerate(edges(M.g)) if i in S]
+    _sg, vmap = induced_subgraph(M.g, edgelist)
+    return [e for e in edges(M.g) if [e.src, e.dst] ⊆ vmap || e.src == e.dst]
 end
 
 
 is_closed(M::Matroid, S) = closure(M, S) == S
 
-function set_to_bits(S)
-  if length(S) == 0
-    return 0
-  end
 
-  reduce(+, (2^(x - 1) for x in S), init=0)
+function set_to_bits(S)
+    if length(S) == 0
+        return 0
+    end
+
+    reduce(+, (2^(x - 1) for x in S), init=0)
 end
 
+
 function bits_to_set(S::Integer)
-  Set(i for (i, c) in enumerate(reverse(bitstring(S))) if c == '1')
+    Set(i for (i, c) in enumerate(reverse(bitstring(S))) if c == '1')
 end
