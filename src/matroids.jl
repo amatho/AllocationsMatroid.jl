@@ -375,3 +375,9 @@ end
 function bits_to_set(S::Integer)
     Set(i for (i, c) in enumerate(reverse(bitstring(S))) if c == '1')
 end
+
+
+function rand_el(S::Integer)
+    x = rand([2^(i-1) for (i,c) in enumerate(reverse(bitstring(S))) if c == '1'])
+    return convert(typeof(S), x)
+end
