@@ -977,9 +977,9 @@ end
         F = FreeMatroid(10)
         Z = ZeroMatroid(10)
 
-        @test is_indep(U, 0)
-        @test is_indep(F, 0)
-        @test is_indep(Z, 0)
+        @test is_indep(U, Set())
+        @test is_indep(F, Set())
+        @test is_indep(Z, Set())
         @test rank(U) == 6
         @test rank(F) == 10
         @test rank(Z) == 0

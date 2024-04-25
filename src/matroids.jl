@@ -1,23 +1,21 @@
 abstract type Matroid end
 
 
-struct ClosedSetsMatroid{T} <: Matroid
+struct ClosedSetsMatroid <: Matroid
     n::Integer # Size of universe
     r::Integer # Final rank (r == length(F)).
-    F::Vector{Set{T}} # Closed sets by rank
-    rank::Dict{T,Integer} # Mapping from sets to rank.
-    Type::DataType
+    F::Vector{Set{AbstractSet{Int}}} # Closed sets by rank
+    rank::Dict{AbstractSet{Int},Integer} # Mapping from sets to rank.
 end
 
 
-struct FullMatroid{T} <: Matroid
+struct FullMatroid <: Matroid
     n::Integer
     r::Integer
-    F::Vector{Set{T}} # Closed sets by rank
-    I::Vector{Set{T}} # Independent sets by rank
-    C::Set{T} # Circuits
-    rank::Dict{T,Integer}
-    Type::DataType
+    F::Vector{Set{AbstractSet{Int}}} # Closed sets by rank
+    I::Vector{Set{AbstractSet{Int}}} # Independent sets by rank
+    C::Set{AbstractSet{Int}} # Circuits
+    rank::Dict{AbstractSet{Int},Integer}
 end
 
 
@@ -45,14 +43,14 @@ FreeMatroid(n) = UniformMatroid(n, n)
 ZeroMatroid(n) = UniformMatroid(n, 0)
 
 
-ground_set(M::ClosedSetsMatroid) = Set(1:M.n)
-ground_set(M::FullMatroid) = Set(1:M.n)
-ground_set(M::UniformMatroid) = Set(1:M.n)
-ground_set(M::GraphicMatroid) = edges(M.g)
+ground_set(M::ClosedSetsMatroid) = BitSet(1:M.n)
+ground_set(M::FullMatroid) = BitSet(1:M.n)
+ground_set(M::UniformMatroid) = BitSet(1:M.n)
+ground_set(M::GraphicMatroid) = BitSet(1:ne(M.n))
 
 
 """
-    is_indep(M::Matroid, S::Set)
+    is_indep(M::Matroid, S)
 
 Independence oracle. Determines whether S is independent in M.
 """
@@ -62,17 +60,18 @@ function is_indep end
 """
     is_indep(M::ClosedSetsMatroid, S::Integer)
 
-Determines whether a given set S is independent in the matroid M, given by the closed sets of M grouped by rank. Uses (I.1) in Greene (1989).
+Determines whether a given set S is independent in the matroid M, given by the
+closed sets of M grouped by rank. Uses (I.1) in Greene (1989).
 """
-function is_indep(M::ClosedSetsMatroid, S::Integer)
-    t = Base.count_ones(S)
+function is_indep(M::ClosedSetsMatroid, S)
+    t = length(S)
 
-    if t > length(M.F)
+    if t > M.r
         return false
     end
 
     for F in M.F[t]
-        if S & F == S
+        if issubset(S, F)
             return false
         end
     end
@@ -81,11 +80,8 @@ function is_indep(M::ClosedSetsMatroid, S::Integer)
 end
 
 
-is_indep(M::ClosedSetsMatroid, S) = is_indep(M, set_to_bits(S))
-
-
-function is_indep(M::FullMatroid, S::Integer)
-    card = Base.count_ones(S)
+function is_indep(M::FullMatroid, S)
+    card = length(S)
     if card + 1 > length(M.I)
         return false
     end
@@ -93,27 +89,21 @@ function is_indep(M::FullMatroid, S::Integer)
 end
 
 
-is_indep(M::FullMatroid, S) = is_indep(M, set_to_bits(S))
-
-
 is_indep(M::UniformMatroid, S) = length(S) <= M.r
-is_indep(M::UniformMatroid, S::Integer) = is_indep(M, bits_to_set(S))
 
 
-function is_indep(m::GraphicMatroid, S)
-    edgelist = [e for (i, e) in enumerate(edges(m.g)) if i in S]
-    subgraph, _vmap = induced_subgraph(m.g, edgelist)
+function is_indep(M::GraphicMatroid, S)
+    edgelist = [e for (i, e) in enumerate(edges(M.g)) if i in S]
+    subgraph, _vmap = induced_subgraph(M.g, edgelist)
     return !is_cyclic(subgraph)
 end
-
-
-bv_is_indep(m::Matroid, bv::BitVector) = is_indep(m, [i for (i, e) in enumerate(bv) if e == 1])
 
 
 """
     rank(M::Matroid, S)
 
-Returns the rank of the set S in M, ie. the size of the largest independent subset of S.
+Returns the rank of the set S in M, ie. the size of the largest independent
+subset of S.
 """
 function rank end
 
@@ -122,46 +112,32 @@ rank(M::Matroid) = M.r
 
 
 """
-    function rank(M::KnuthMatroid, S::Integer)
+    function rank(M::ClosedSetsMatroid, S)
 
 Rank ``oracle''. Returns the rank of the set S in the matroid M.
 """
-function rank(M::ClosedSetsMatroid, S::Integer)
+function rank(M::ClosedSetsMatroid, S)
     for (r, Fr) in enumerate(M.F), B ∈ Fr
-        if S & B == S
+        if issubset(S, B)
             return r - 1
         end
     end
 end
-rank(M::ClosedSetsMatroid, S) = rank(M, set_to_bits(S))
 
 
-function rank(M::FullMatroid, S::Integer)
-    for (r, Fr) in enumerate(M.F)
-        for F ∈ Fr
-            if S & F == S
-                return r - 1
-            end
+function rank(M::FullMatroid, S)
+    for (r, Fr) in enumerate(M.F), F ∈ Fr
+        if issubset(S, F)
+            return r - 1
         end
     end
 end
-rank(M::FullMatroid, S) = rank(M, set_to_bits(S))
 
 
 rank(M::UniformMatroid, S) = min(length(S), M.r)
-rank(M::UniformMatroid, S::Integer) = rank(M, bits_to_set(S))
 
 
 rank(M::GraphicMatroid, S) = length(S) > 0 ? length(minimal_spanning_subset(M, S)) : 0
-
-
-"""
-    bv_rank(M::Matroid, S::BitVector)
-
-Finds the rank of a subset S of 1:m given as an m-length BitVector bv,
-where bv[i] == 1 iff i ∈ S.
-"""
-bv_rank(M::Matroid, bv::BitVector) = rank(M, [i for (i, e) in enumerate(bv) if e == 1])
 
 
 """
@@ -175,13 +151,14 @@ function is_circuit end
 """
     function is_circuit(M::ClosedSetsMatroid, S::Integer)
 
-Determines whether a given set S is a circuit in the matroid M, given by the closed sets of M. Uses (C.1) and (C.2) in Greene (1989).
+Determines whether a given set S is a circuit in the matroid M, given by the
+closed sets of M. Uses (C.1) and (C.2) in Greene (1989).
 """
-function is_circuit(M::ClosedSetsMatroid, S::Integer)
-    t = Base.count_ones(S)
+function is_circuit(M::ClosedSetsMatroid, S)
+    t = length(S)
 
     for F in M.F[t] # (C.1) S ⊆ F for some F ∈ F_{t-1}.
-        if S & F == S
+        if issubset(S, F)
             @goto C2
         end
     end
@@ -189,7 +166,7 @@ function is_circuit(M::ClosedSetsMatroid, S::Integer)
 
     @label C2
     for F in M.F[t-1] # (C.2) |S ∩ F| ≤ r(F) for all F ∈ F_{t-2}.
-        if Base.count_ones(S & F) > t - 2
+        if length(intersect(S, F)) > t - 2
             return false
         end
     end
@@ -198,12 +175,10 @@ function is_circuit(M::ClosedSetsMatroid, S::Integer)
 end
 
 
-is_circuit(M::FullMatroid, S::Integer) = S in M.C
-is_circuit(M::FullMatroid, S) = is_circuit(M, set_to_bits(S))
+is_circuit(M::FullMatroid, S) = S in M.C
 
 
-is_circuit(M::UniformMatroid, S::Integer) = M.r == Base.count_ones(S) - 1 <= M.n
-is_circuit(M::UniformMatroid, S) = is_circuit(M, set_to_bits(S))
+is_circuit(M::UniformMatroid, S) = M.r == length(S) - 1
 
 
 function is_circuit(M::GraphicMatroid, S)
@@ -214,7 +189,8 @@ end
 """
     minimal_spanning_subset(M::Matroid, S)
 
-Finds a minimal spanning subset of S in M. If S is the ground set of M, this produces a basis of M.
+Finds a minimal spanning subset of S in M. If S is the ground set of M, this
+produces a basis of M.
 """
 function minimal_spanning_subset end
 
@@ -222,29 +198,29 @@ function minimal_spanning_subset end
 """
     function minimal_spanning_subset(M::ClosedSetsMatroid, A::Integer)
 
-Algorithm 3.1 from Greene (1989). Given a matroid M = (E, F) and some subset A of E, finds a minimal spanning subset of A. If A = E, this finds a basis of M. If A is a basis, this finds A.
+Algorithm 3.1 from Greene (1989). Given a matroid M = (E, F) and some subset A
+of E, finds a minimal spanning subset of A. If A = E, this finds a basis of M.
+If A is a basis, this finds A.
 """
-minimal_spanning_subset(M::ClosedSetsMatroid, A::Integer) = _mss(M, 0, A)
-minimal_spanning_subset(M::ClosedSetsMatroid, A) = minimal_spanning_subset(M, set_to_bits(A))
+minimal_spanning_subset(M::ClosedSetsMatroid, A) = _mss(M, 0, A)
 
 
-minimal_spanning_subset(M::FullMatroid, A::Integer) = _mss(M, 0, A)
-minimal_spanning_subset(M::FullMatroid, A) = minimal_spanning_subset(M, set_to_bits(A))
+minimal_spanning_subset(M::FullMatroid, A) = _mss(M, 0, A)
 
 
-function _mss(M, j::Integer, Ā::Integer)
-    B = [Ā & F for F in M.F[j+1] if Base.count_ones(Ā & F) > j]
+function _mss(M::Union{ClosedSetsMatroid,FullMatroid}, j::Integer, A)
+    B = [intersect(F, A) for F in M.F[j+1] if length(intersect(F, A)) > j]
 
     while length(B) == 0
-        if j >= Base.count_ones(Ā) - 1
-            return Ā
+        if j >= length(A) - 1
+            return A
         end
 
         j += 1
-        B = [Ā & F for F in M.F[j+1] if Base.count_ones(Ā & F) > j]
+        B = [intersect(F, A) for F in M.F[j+1] if length(intersect(F, A)) > j]
     end
 
-    _mss(M, j, Ā & ~rand_el(reduce(|, B)))
+    _mss(M, j, setdiff(A, rand(reduce(union, B))))
 end
 
 
@@ -266,35 +242,36 @@ end
 """
     function minimal_spanning_subsets(M::ClosedSetsMatroid, A::Integer)
 
-A modification of Algorithm 3.1 from Greene (1989) that finds all minimal spanning subsets of A ⊆ E, given a matroid M = (E, F). If A = E, this finds the bases of M.
+A modification of Algorithm 3.1 from Greene (1989) that finds all minimal
+spanning subsets of A ⊆ E, given a matroid M = (E, F). If A = E, this finds the
+bases of M.
 """
-minimal_spanning_subsets(M::ClosedSetsMatroid, A::Integer) = _mss_all(M, 0, A)
-minimal_spanning_subsets(M::ClosedSetsMatroid, A) = minimal_spanning_subsets(M, set_to_bits(A))
+minimal_spanning_subsets(M::ClosedSetsMatroid, A) = _mss_all(M, 0, A)
 
 
-minimal_spanning_subsets(M::FullMatroid, A::Integer) = _mss_all(M, 0, A)
-minimal_spanning_subsets(M::FullMatroid, A) = minimal_spanning_subsets(M, set_to_bits(A))
+minimal_spanning_subsets(M::FullMatroid, A) = _mss_all(M, 0, A)
 
 
-function _mss_all(M, j::Integer, Ā::Integer)
-    B = [Ā & F for F in M.F[j+1] if Base.count_ones(Ā & F) > j]
+function _mss_all(M, j::Integer, A)
+    B = [intersect(F, A) for F in M.F[j+1] if length(intersect(F, A)) > j]
 
     while length(B) == 0
-        if j >= Base.count_ones(Ā) - 1
-            return Ā
+        if j >= length(A) - 1
+            return A
         end
 
         j += 1
-        B = [Ā & F for F in M.F[j+1] if Base.count_ones(Ā & F) > j]
+        B = [intersect(F, A) for F in M.F[j+1] if length(intersect(F, A)) > j]
     end
 
     bases = Set()
-    t = reduce(|, B)
-    while t > 0
-        x = t & -t
-        bases = bases ∪ _mss_all(M, j, Ā & ~x)
-        t &= ~x
+    T = reduce(union, B)
+    while !isempty(T)
+        x = minimum(T)
+        bases = union(bases, _mss_all(M, j, setdiff(A, x)))
+        setdiff!(T, x)
     end
+
     return bases
 end
 
@@ -311,8 +288,8 @@ Finds the set of bases of M.
 function bases end
 
 
-bases(M::ClosedSetsMatroid) = _mss_all(M, 0, 2^M.n - 1)
-bases(M::FullMatroid) = _mss_all(M, 0, 2^M.n - 1)
+bases(M::ClosedSetsMatroid) = _mss_all(M, 0, ground_set(M))
+bases(M::FullMatroid) = _mss_all(M, 0, ground_set(M))
 
 
 bases(M::UniformMatroid) = throw("unimplemented")
@@ -322,34 +299,31 @@ bases(M::GraphicMatroid) = throw("unimplemented")
 """
     closure(M::Matroid, S)
 
-Finds the closure of a set S in M, that, when given a set S ⊆ E, returns the set of elements in x ∈ E such that x can be added to S with no increase in rank. It returns the closed set of the same rank as S, that contains S.
+Finds the closure of a set S in M, that, when given a set S ⊆ E, returns the set
+of elements in x ∈ E such that x can be added to S with no increase in rank. It
+returns the closed set of the same rank as S, that contains S.
 """
 function closure end
 
 
-function closure(M::ClosedSetsMatroid, S::Integer)
-    for Fr in M.F, B ∈ Fr
-        if S & B == S
+function closure(M::ClosedSetsMatroid, S)
+    for Fr in M.F, B in Fr
+        if issubset(S, B)
             return B
         end
     end
 end
-closure(M::ClosedSetsMatroid, S) = closure(M, set_to_bits(S))
 
 
-function closure(M::FullMatroid, S::Integer)
-    for Fr in M.F
-        for B ∈ Fr
-            if S & B == S
-                return B
-            end
+function closure(M::FullMatroid, S)
+    for Fr in M.F, B in Fr
+        if issubset(S, B)
+            return B
         end
     end
 end
-closure(M::FullMatroid, S) = closure(M, set_to_bits(S))
 
 
-closure(M::UniformMatroid, S::Integer) = closure(M, bits_to_set(S))
 closure(M::UniformMatroid, S) = length(S) < M.r ? S : ground_set(M)
 
 
@@ -361,23 +335,3 @@ end
 
 
 is_closed(M::Matroid, S) = closure(M, S) == S
-
-
-function set_to_bits(S)
-    if length(S) == 0
-        return 0
-    end
-
-    reduce(+, (2^(x - 1) for x in S), init=0)
-end
-
-
-function bits_to_set(S::Integer)
-    Set(i for (i, c) in enumerate(reverse(bitstring(S))) if c == '1')
-end
-
-
-function rand_el(S::Integer)
-    x = rand([2^(i-1) for (i,c) in enumerate(reverse(bitstring(S))) if c == '1'])
-    return convert(typeof(S), x)
-end
