@@ -257,18 +257,22 @@ function _mss_all(M, j::Integer, A)
 
     while length(B) == 0
         if j >= length(A) - 1
-            return A
+            # Make sure to add A to a new set, without flattening (since A is
+            # already a set)
+            S = Set{AbstractSet{Int}}()
+            push!(S, A)
+            return S
         end
 
         j += 1
         B = [intersect(F, A) for F in M.F[j+1] if length(intersect(F, A)) > j]
     end
 
-    bases = Set()
+    bases = Set{AbstractSet{Int}}()
     T = reduce(union, B)
     while !isempty(T)
         x = minimum(T)
-        bases = union(bases, _mss_all(M, j, setdiff(A, x)))
+        union!(bases, _mss_all(M, j, setdiff(A, x)))
         setdiff!(T, x)
     end
 
