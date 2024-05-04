@@ -66,7 +66,9 @@ closed sets of M grouped by rank. Uses (I.1) in Greene (1989).
 function is_indep(M::ClosedSetsMatroid, S)
     t = length(S)
 
-    if t > M.r
+    if t == 0
+        return true
+    elseif t > M.r
         return false
     end
 
@@ -82,7 +84,9 @@ end
 
 function is_indep(M::FullMatroid, S)
     card = length(S)
-    if card + 1 > length(M.I)
+    if card == 0
+        return true
+    elseif card + 1 > length(M.I)
         return false
     end
     return S in M.I[card+1]
