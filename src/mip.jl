@@ -101,7 +101,7 @@ init_mip(V::Matrix, solver; kwds...) = init_mip(Additive(V), solver; kwds...)
 # ϵ: https://www.gurobi.com/documentation/9.1/refman/intfeastol.html
 function solve_mip(ctx; ϵ=1e-5, check=check_partition)
 
-    if length(ctx.model[:callbacks]) != 0
+    if !isempty(ctx.model[:callbacks])
         set_attribute(ctx.model, MOI.LazyConstraintCallback(), cb_data -> lazy_constraint_callback(cb_data, ctx))
     end
 
