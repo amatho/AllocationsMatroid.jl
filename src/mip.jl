@@ -364,7 +364,7 @@ end
 
 
 # Enforce no lazy constraint on the JuMP model.
-enforce_lazy(C::Nothing) = identity
+enforce_lazy(_::Nothing) = identity
 
 
 # Enforce a matroid constraint lazily.
@@ -398,6 +398,16 @@ enforce_lazy(C::MatroidConstraint) = function(ctx)
     end
 
     push!(ctx.model[:callbacks], callback)
+
+    # Add the constraint that any bundle must contain at most r items, where r
+    # is the rank of the matroid, since any independent set of a matroid will
+    # have at most r items.
+    V, A = ctx.profile, ctx.alloc_var
+    E = ground_set(C.matroid)
+    r = rank(C.matroid)
+    for i in agents(V)
+        @constraint(ctx.model, sum(A[i, g] for g in E) <= r)
+    end
 
     return ctx
 end
