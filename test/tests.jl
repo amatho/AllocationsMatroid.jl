@@ -1101,7 +1101,7 @@ end
         @test rank(U, S) == 6 || S
         @test closure(U, S) == Set(1:10) || S
 
-        
+
         for i in 8:10
             S = randperm(10)[1:i]
             @test is_indep(U, S) == false || S
@@ -1114,7 +1114,7 @@ end
     @testset "Exchange graphs and transfer paths" begin
         # Every agent likes every item.
         matroids = [FreeMatroid(5) for _ in 1:5]
-        
+
         # Every agent has 1 item.
         A = Allocation(5,5)
         for i in 1:5
