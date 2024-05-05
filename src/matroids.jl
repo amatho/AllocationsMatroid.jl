@@ -46,7 +46,7 @@ ZeroMatroid(n) = UniformMatroid(n, 0)
 ground_set(M::ClosedSetsMatroid) = BitSet(1:M.n)
 ground_set(M::FullMatroid) = BitSet(1:M.n)
 ground_set(M::UniformMatroid) = BitSet(1:M.n)
-ground_set(M::GraphicMatroid) = BitSet(1:ne(M.n))
+ground_set(M::GraphicMatroid) = BitSet(1:M.n)
 
 
 """
