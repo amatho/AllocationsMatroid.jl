@@ -368,31 +368,30 @@ enforce_lazy(_::Nothing) = identity
 
 
 # Enforce a matroid constraint lazily.
-enforce_lazy(C::MatroidConstraint) = function(ctx)
+enforce_lazy(C::MatroidConstraints) = function (ctx)
     callback = function (cb_data, ctx)
         if callback_node_status(cb_data, ctx.model) != MOI.CALLBACK_NODE_STATUS_INTEGER
             return
         end
 
         V, A, model = ctx.profile, ctx.alloc_var, ctx.model
-        M = C.matroid
-        alloc = [Set() for _ in agents(V)]
+        Ms = C.matroids
         ϵ = 1e-5
 
-        for i in agents(V), g in items(V)
-            val = callback_value(cb_data, A[i, g])
-            @assert val <= ϵ || val >= 1 - ϵ
-            val >= 1.0 - ϵ && push!(alloc[i], g)
-        end
+        for i in agents(V)
+            bundle = Set()
+            M = Ms[i]
 
-        for B in alloc
-            if !is_indep(M, B)
-                bundle_rank = rank(M, B)
+            for g in items(V)
+                val = callback_value(cb_data, A[i, g])
+                @assert val <= ϵ || val >= 1 - ϵ
+                val >= 1.0 - ϵ && push!(bundle, g)
+            end
 
-                for i in agents(V)
-                    con = @build_constraint(sum(A[i, g] for g in B) <= bundle_rank)
-                    MOI.submit(model, MOI.LazyConstraint(cb_data), con)
-                end
+            if !is_indep(M, bundle)
+                bundle_rank = rank(M, bundle)
+                con = @build_constraint(sum(A[i, g] for g in bundle) <= bundle_rank)
+                MOI.submit(model, MOI.LazyConstraint(cb_data), con)
             end
         end
     end
@@ -403,13 +402,21 @@ enforce_lazy(C::MatroidConstraint) = function(ctx)
     # is the rank of the matroid, since any independent set of a matroid will
     # have at most r items.
     V, A = ctx.profile, ctx.alloc_var
-    E = ground_set(C.matroid)
-    r = rank(C.matroid)
     for i in agents(V)
+        M = C.matroids[i]
+        E = ground_set(M)
+        r = rank(M)
         @constraint(ctx.model, sum(A[i, g] for g in E) <= r)
     end
 
     return ctx
+end
+
+
+enforce_lazy(C::MatroidConstraint) = function (ctx)
+    V, M = ctx.profile, C.matroid
+    MCs = MatroidConstraints(copy(M) for _ in agents(V))
+    ctx |> enforce_lazy(MCs)
 end
 
 

@@ -7,6 +7,7 @@ struct ClosedSetsMatroid <: Matroid
     F::Vector{Set{AbstractSet{Int}}} # Closed sets by rank
     rank::Dict{AbstractSet{Int},Integer} # Mapping from sets to rank.
 end
+Base.copy(M::ClosedSetsMatroid) = ClosedSetsMatroid(M.n, M.r, M.F, M.rank)
 
 
 struct FullMatroid <: Matroid
@@ -18,13 +19,17 @@ struct FullMatroid <: Matroid
     rank::Dict{AbstractSet{Int},Integer}
 end
 
+Base.copy(M::FullMatroid) = FullMatroid(M.n, M.r, M.F, M.I, M.C, M.rank)
+
 
 struct GraphicMatroid <: Matroid
     g::Graph
     n::Integer
     r::Integer
-    GraphicMatroid(g::Graph) = new(g, ne(g), length(kruskal_mst(g)))
 end
+
+GraphicMatroid(g::Graph) = GraphicMatroid(g, ne(g), length(kruskal_mst(g)))
+Base.copy(M::GraphicMatroid) = GraphicMatroid(M.g, M.n, M.r)
 
 
 struct UniformMatroid <: Matroid
@@ -32,11 +37,15 @@ struct UniformMatroid <: Matroid
     r::Integer
 end
 
+Base.copy(M::UniformMatroid) = UniformMatroid(M.n, M.r)
+
 
 struct PartitionMatroid <: Matroid
     n::Integer
     categories::Vector{UnitRange{Integer}}
 end
+
+Base.copy(M::PartitionMatroid) = PartitionMatroid(M.n, M.categories)
 
 
 FreeMatroid(n) = UniformMatroid(n, n)
