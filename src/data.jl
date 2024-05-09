@@ -150,26 +150,27 @@ Knuth's matroid construction (1974). Generates a matroid in terms of its closed
 sets, given by the size of the universe `m` and a list of enlargements `X`.
 """
 function knuth_matroid(m, X)
-    r = 1 # r is current rank +1 due to 1-indexing.
-    F = [Set([BitSet()])]
-    E = BitSet(1:m)
-    rank = Dict{BitSet,Integer}(BitSet() => 0)
+    r::Int = 1 # r is current rank +1 due to 1-indexing.
+    F::Vector{Set{BitSet}} = [Set([BitSet()])]
+    E::BitSet = BitSet(1:m)
+    rank::Dict{BitSet,Int} = Dict(BitSet() => 0)
 
     while E ∉ F[r]
         # Initialize F[r+1].
         push!(F, Set{BitSet}())
 
         # Setup add_set.
-        add_callback = x -> rank[x] = r
-        add_function = x -> add_set!(x, F, r, rank, add_callback)
+        add_callback = let r = r, rank = rank
+            x -> rank[x] = r
+        end
 
-        generate_covers!(F, r, E, add_function)
+        generate_covers!(E, F, r, rank, add_callback)
 
         # Perform enlargements.
         if r <= length(X)
             if X[r] !== nothing
                 for x in X[r]
-                    add_function(x)
+                    add_set!(x, F, r, rank, add_callback)
                 end
             end
         end
@@ -193,14 +194,10 @@ Accepts the size of the universe `m`, and a list `P = [p₁, p₂, …]`, where 
 denotes the number of coarsenings to apply at rank `i`.
 """
 function rand_matroid_knu74_1(m, P; rng=default_rng())
-    r = 1
-    F = [Set([BitSet()])]
-    E = BitSet(1:m)
-    rank = Dict{BitSet,Integer}(BitSet() => 0)
-
-    # Setup add_set.
-    add_callback = x -> rank[x] = r
-    add_function = x -> add_set!(x, F, r, rank, add_callback)
+    r::Int = 1
+    F::Vector{Set{BitSet}} = [Set([BitSet()])]
+    E::BitSet = BitSet(1:m)
+    rank::Dict{BitSet,Int} = Dict(BitSet() => 0)
 
     while E ∉ F[r]
         r > m && @warn "Rank is larger than universe!" m r
@@ -208,11 +205,15 @@ function rand_matroid_knu74_1(m, P; rng=default_rng())
         # Initialize F[r+1].
         push!(F, Set{BitSet}())
 
-        generate_covers!(F, r, E, add_function)
+        add_callback = let r = r, rank = rank
+            x -> rank[x] = r
+        end
+
+        generate_covers!(E, F, r, rank, add_callback)
 
         # Perform coarsening.
         if r <= length(P)
-            coarsen!(F, r, E, P[r], add_function, rng=rng)
+            coarsen!(E, F, r, rank, P[r], add_callback, rng=rng)
         end
 
         r += 1
@@ -234,9 +235,9 @@ set in the rank table, and quickly becomes infeasible for values of `m` much
 larger than 16.
 """
 function rand_matroid_knu74_2(m, P; rng=default_rng())
-    r = 1
-    E = BitSet(1:m)
-    rank = Dict{BitSet,Integer}(BitSet() => 0)
+    r::Int = 1
+    E::BitSet = BitSet(1:m)
+    rank::Dict{BitSet,Int} = Dict(BitSet() => 0)
 
     F::Vector{Set{BitSet}} = [Set([BitSet()])]
     I::Vector{Set{BitSet}} = [Set([BitSet()])]
@@ -248,15 +249,15 @@ function rand_matroid_knu74_2(m, P; rng=default_rng())
         push!(F, Set{BitSet}())
         push!(I, Set{BitSet}())
 
-        # Setup add_set.
-        add_callback = x -> mark_independent_subsets!(x, I, r, length(x), rank)
-        add_function = x -> add_set!(x, F, r, rank, add_callback)
+        add_callback = let r = r, rank = rank, I = I
+            x -> mark_independent_subsets!(x, I, r, length(x), rank)
+        end
 
-        generate_covers!(F, r, E, add_function)
+        generate_covers!(E, F, r, rank, add_callback)
 
         # Perform coarsening.
         if r <= length(P)
-            coarsen!(F, r, E, P[r], add_function, rng=rng)
+            coarsen!(E, F, r, rank, P[r], add_callback, rng=rng)
         end
 
         r += 1
@@ -269,13 +270,13 @@ rand_matroid_knu74_2(V::Profile, P; kwds...) = rand_matroid_knu74_2(ni(V), P, kw
 
 
 """
-    generate_covers!(F, r, E, insert_fn)
+    generate_covers!(E, F, r, rank, callback)
 
 Generates minimal closed sets for rank r+1 and inserts them into F[r+1], using
 the supplied insert_fn. This function should take one argument, the newly added
 set.
 """
-function generate_covers!(F, r, E, insert_fn)
+function generate_covers!(E, F, r, rank, callback)
     for y in F[r]
         t = setdiff(E, y)
         # Find all sets in F[r+1] that already contain y and remove excess
@@ -291,7 +292,7 @@ function generate_covers!(F, r, E, insert_fn)
         # Insert y ∪ a for all a ∈ t.
         while !isempty(t)
             a = minimum(t)
-            insert_fn(union(y, a))
+            add_set!(union(y, a), F, r, rank, callback)
             setdiff!(t, a)
         end
     end
@@ -299,11 +300,11 @@ end
 
 
 """
-    coarsen!(F, r, E, count, add_function; rng=default_rng())
+    coarsen!(E, F, r, rank, count, callback; rng=default_rng())
 
 Apply the specified number of coarsenings to the matroid.
 """
-function coarsen!(F, r, E, count, add_function; rng=default_rng())
+function coarsen!(E, F, r, rank, count, callback; rng=default_rng())
     for _ in 1:count
         if E ∈ F[r+1]
             return
@@ -313,7 +314,7 @@ function coarsen!(F, r, E, count, add_function; rng=default_rng())
         a = rand(rng, t)
         delete!(F[r+1], A)
 
-        add_function(union(A, a))
+        add_set!(union(A, a), F, r, rank, callback)
     end
 end
 
@@ -423,10 +424,10 @@ infeasible for values of n much larger than 16.
 """
 function knuth_matroid_erect(m, enlargements)
     # Initialize.
-    r = 1
-    mask = BitSet(1:m)
-    mask_bits = 2^m - 1
-    rank = Dict{BitSet,Int}()
+    r::Int = 1
+    mask::BitSet = BitSet(1:m)
+    mask_bits::Int = 2^m - 1
+    rank::Dict{BitSet,Int} = Dict()
 
     # Populate rank table with 100+cardinality for all subsets of E.
     rank[BitSet()] = 100
