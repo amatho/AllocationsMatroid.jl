@@ -14,9 +14,10 @@ mutable struct MIPContext{V <: Additive, M, A, S}
     solver::S
     objectives::Vector{Any}
     alloc::Union{Allocation, Nothing}
+    callbacks::Vector{Function}
     res::NamedTuple
 end
-MIPContext(v, a, m, s) = MIPContext(v, a, m, s, [], nothing, (;))
+MIPContext(v, a, m, s) = MIPContext(v, a, m, s, [], nothing, Function[], (;))
 
 
 na(ctx::MIPContext) = na(ctx.profile)
@@ -72,9 +73,6 @@ function init_mip(V::Additive, solver;
         @constraint(model, sum(A[i, g] for i in N) <= hi)
     end
 
-    # Callbacks to be registered for lazy constraints
-    model[:callbacks] = Function[]
-
     return MIPContext(V, A, model, solver)
 
 end
@@ -100,8 +98,8 @@ init_mip(V::Matrix, solver; kwds...) = init_mip(Additive(V), solver; kwds...)
 # ϵ: https://www.gurobi.com/documentation/9.1/refman/intfeastol.html
 function solve_mip(ctx; ϵ=1e-5, check=nothing)
 
-    if !isempty(ctx.model[:callbacks])
-        set_attribute(ctx.model, MOI.LazyConstraintCallback(), cb_data -> lazy_constraint_callback(cb_data, ctx))
+    if !isempty(ctx.callbacks)
+        set_attribute(ctx.model, MOI.LazyConstraintCallback(), cb_data -> lazy_constraint_callback(ctx, cb_data))
     end
 
     if isempty(ctx.objectives)
@@ -127,6 +125,17 @@ function solve_mip(ctx; ϵ=1e-5, check=nothing)
 
     return ctx
 
+end
+
+
+# The "master" lazy constraint callback method that runs each registered
+# callback.
+function lazy_constraint_callback(ctx, cb_data)
+    if callback_node_status(cb_data, ctx.model) == MOI.CALLBACK_NODE_STATUS_INTEGER
+        for f in ctx.callbacks
+            f(ctx, cb_data)
+        end
+    end
 end
 
 
@@ -363,60 +372,75 @@ enforce(C::Permitted, i, j) = function(ctx)
 end
 
 
-# Enforce no lazy constraint on the JuMP model.
-enforce_lazy(_::Nothing) = identity
+# Add the constraint that any bundle must contain at most r items, where r
+# is the rank of the matroid, since any independent set of a matroid will
+# have at most r items.
+function matroid_initial_constraint(ctx, M, i)
+    A = ctx.alloc_var
+    E = ground_set(M)
+    r = rank(M)
+    @constraint(ctx.model, sum(A[i, g] for g in E) <= r)
+end
 
 
-# Enforce a matroid constraint lazily.
-enforce_lazy(C::MatroidConstraints) = function (ctx)
-    callback = function (cb_data, ctx)
-        if callback_node_status(cb_data, ctx.model) != MOI.CALLBACK_NODE_STATUS_INTEGER
-            return
-        end
+# Check if agent `i` has a dependent bundle in the matroid `M`, and submit a
+# constraint to the model if necessary.
+function matroid_fix_constraint(ctx, cb_data, M, i)
+    V, A, model = ctx.profile, ctx.alloc_var, ctx.model
+    ϵ = 1e-5
+    bundle = Set()
 
-        V, A, model = ctx.profile, ctx.alloc_var, ctx.model
-        Ms = C.matroids
-        ϵ = 1e-5
+    for g in items(V)
+        val = callback_value(cb_data, A[i, g])
+        @assert val <= ϵ || val >= 1 - ϵ
+        val >= 1.0 - ϵ && push!(bundle, g)
+    end
 
+    if !is_indep(M, bundle)
+        bundle_rank = rank(M, bundle)
+        con = @build_constraint(sum(A[i, g] for g in bundle) <= bundle_rank)
+        MOI.submit(model, MOI.LazyConstraint(cb_data), con)
+    end
+end
+
+
+# Enforce a symmetric matroid constraint on the JuMP model (using a lazy
+# callback).
+enforce(C::MatroidConstraint) = function (ctx)
+    callback = function (ctx, cb_data)
+        V = ctx.profile
+        M = C.matroid
         for i in agents(V)
-            bundle = Set()
-            M = Ms[i]
-
-            for g in items(V)
-                val = callback_value(cb_data, A[i, g])
-                @assert val <= ϵ || val >= 1 - ϵ
-                val >= 1.0 - ϵ && push!(bundle, g)
-            end
-
-            if !is_indep(M, bundle)
-                bundle_rank = rank(M, bundle)
-                con = @build_constraint(sum(A[i, g] for g in bundle) <= bundle_rank)
-                MOI.submit(model, MOI.LazyConstraint(cb_data), con)
-            end
+            matroid_fix_constraint(ctx, cb_data, M, i)
         end
     end
 
-    push!(ctx.model[:callbacks], callback)
+    push!(ctx.callbacks, callback)
 
-    # Add the constraint that any bundle must contain at most r items, where r
-    # is the rank of the matroid, since any independent set of a matroid will
-    # have at most r items.
-    V, A = ctx.profile, ctx.alloc_var
+    V = ctx.profile
+    M = C.matroid
     for i in agents(V)
-        M = C.matroids[i]
-        E = ground_set(M)
-        r = rank(M)
-        @constraint(ctx.model, sum(A[i, g] for g in E) <= r)
+        matroid_initial_constraint(ctx, M, i)
     end
 
     return ctx
 end
 
 
-enforce_lazy(C::MatroidConstraint) = function (ctx)
-    V, M = ctx.profile, C.matroid
-    MCs = MatroidConstraints(copy(M) for _ in agents(V))
-    ctx |> enforce_lazy(MCs)
+# Enforce an asymmetric matroid constraint on the JuMP model (using lazy
+# callbacks).
+enforce(C::MatroidConstraints, i, j) = function (ctx)
+    callback = function (ctx, cb_data)
+        M = C.matroids[i]
+        matroid_fix_constraint(ctx, cb_data, M, j)
+    end
+
+    push!(ctx.callbacks, callback)
+
+    M = C.matroids[i]
+    matroid_initial_constraint(ctx, M, j)
+
+    return ctx
 end
 
 
@@ -497,15 +521,6 @@ function enforce_efx(ctx)
 
     return ctx
 
-end
-
-
-# The "master" lazy constraint callback method that runs each registered
-# callback.
-function lazy_constraint_callback(cb_data, ctx)
-    for f in ctx.model[:callbacks]
-        f(cb_data, ctx)
-    end
 end
 
 
