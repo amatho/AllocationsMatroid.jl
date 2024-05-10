@@ -103,9 +103,6 @@ Symmetry(instance) = Symmetry(typeof(instance))
 const ASYM_DOC = """
     This constraint is asymmetric (see [`Symmetry`](@ref)).
     """
-const SYM_DOC = """
-    This constraint is symmetric (see [`Symmetry`](@ref)).
-    """
 
 
 ## Allocations ###############################################################
@@ -917,13 +914,10 @@ Symmetry(::Type{<:Required}) = Asymmetric()
 
 A constraint defined by a matroid. An allocation satisfies the matroid
 constraint if every bundle is independent in the given matroid.
-
-$SYM_DOC
 """
 struct MatroidConstraint <: Constraint
     matroid::T where {T<:Matroid}
 end
-Symmetry(::Type{<:MatroidConstraint}) = Symmetric()
 
 
 """
@@ -932,8 +926,6 @@ Symmetry(::Type{<:MatroidConstraint}) = Symmetric()
 A constraint defined by multiple matroids, one for each agent. An allocation
 satisfies the matroid constraints if every agent's bundle is independent in
 their corresponding matroid.
-
-$SYM_DOC
 """
 struct MatroidConstraints <: Constraint
     matroids::Vector{Matroid}
