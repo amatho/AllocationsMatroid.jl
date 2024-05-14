@@ -119,27 +119,29 @@ rand_conflicts_ba02(V::Profile; kwds...) = rand_conflicts_ba02(ni(V); kwds...)
 """
     rand_matroid_er59(m; n=nothing, rng=default_rng())
     rand_matroid_er59(V::Profile; ...)
+    rand_matroid_er59(n, m; kwds...)
 
 Generate a random `GraphicMatroid`, whose underlying graph is constructed
 according to the [Erdős–Rényi model
-](https://doi.org/10.5486%2FPMD.1959.6.3-4.12). The keyword argument `n`
-specifies the possible values for the corresponding parameter \$n\$, which is
-generated using `rand`.
+](https://doi.org/10.5486%2FPMD.1959.6.3-4.12). The keyword argument `verts`
+specifies the possible values for the parameter \$n\$ (i.e., how many vertices
+to generate), which is generated using `rand`.
 """
-function rand_matroid_er59(m; n=nothing, rng=default_rng())
-    if isnothing(n)
+function rand_matroid_er59(m; verts=nothing, rng=default_rng())
+    if isnothing(verts)
         # Find the minimum vertices in a graph with `m` edges
         min_verts = ceil(Int, sqrt(2 * m) + (1 / 2))
         max_verts = ceil(Int, sqrt(2) * m)
-        nn = rand(rng, min_verts:max_verts)
-    else
-        nn = rand(rng, n)
+        verts = min_verts:max_verts
     end
-    G = erdos_renyi(nn, m, rng=rng)
+
+    n = rand(rng, verts)
+    G = erdos_renyi(n, m, rng=rng)
     return GraphicMatroid(G)
 end
 
 rand_matroid_er59(V::Profile; kwds...) = rand_matroid_er59(ni(V), kwds...)
+rand_matroid_er59(n, m; kwds...) = [rand_matroid_er59(m, kwds...) for _ in 1:n]
 
 
 """
@@ -187,6 +189,7 @@ knuth_matroid(V::Profile, X) = knuth_matroid(ni(V), X)
 """
     rand_matroid_knu74_1(m, P; rng=default_rng())
     rand_matroid_knu74_1(V::Profile, P; ...)
+    rand_matroid_knu74_1(n, m, P; kwds...)
 
 Randomized version of Knuth's matroid construction. Random matroids are
 generated via the method of random coarsening described in the 1974 paper.
@@ -223,11 +226,13 @@ function rand_matroid_knu74_1(m, P; rng=default_rng())
 end
 
 rand_matroid_knu74_1(V::Profile, P; kwds...) = rand_matroid_knu74_1(ni(V), P, kwds...)
+rand_matroid_knu74_1(n, m, P; kwds...) = [rand_matroid_knu74_1(m, P, kwds...) for _ in 1:n]
 
 
 """
     rand_matroid_knu74_2(m, P; rng=default_rng())
     rand_matroid_knu74_2(V::Profile, P; ...)
+    rand_matroid_knu74_2(n, m, P; kwds...)
 
 Randomized version of Knuth's matroid construction, that also keeps track of
 independent sets. This entails keeping storing the whole power set of the ground
@@ -267,6 +272,7 @@ function rand_matroid_knu74_2(m, P; rng=default_rng())
 end
 
 rand_matroid_knu74_2(V::Profile, P; kwds...) = rand_matroid_knu74_2(ni(V), P, kwds...)
+rand_matroid_knu74_2(n, m, P; kwds...) = [rand_matroid_knu74_2(m, P, kwds...) for _ in 1:n]
 
 
 """
