@@ -186,16 +186,31 @@ knuth_matroid(V::Profile, X) = knuth_matroid(ni(V), X)
 
 
 """
-    rand_matroid_knu74_1(m, P; rng=default_rng())
-    rand_matroid_knu74_1(V::Profile, P; ...)
-    rand_matroid_knu74_1(n, m, P; kwds...)
+    rand_matroid_knu74(m, P; rng=default_rng())
+    rand_matroid_knu74(V::Profile, P; ...)
+    rand_matroid_knu74(n, m, P; kwds...)
 
 Randomized version of Knuth's matroid construction. Random matroids are
 generated via the method of random coarsening described in the 1974 paper.
 Accepts the size of the universe `m`, and a list `P = [p₁, p₂, …]`, where `pᵢ`
 denotes the number of coarsenings to apply at rank `i`.
+
+The keyword argument `track_indep` controls whether the matroid generation
+should keep track of independent sets under construction.
 """
-function rand_matroid_knu74_1(m, P; rng=default_rng())
+function rand_matroid_knu74(m, P; track_indep=false, rng=default_rng())
+    if track_indep
+        return _rand_matroid_knu74_full(m, P, rng=rng)
+    else
+        return _rand_matroid_knu74_closed(m, P, rng=rng)
+    end
+end
+
+rand_matroid_knu74(V::Profile, P; kwds...) = rand_matroid_knu74(ni(V), P; kwds...)
+rand_matroid_knu74(n, m, P; kwds...) = [rand_matroid_knu74(m, P; kwds...) for _ in 1:n]
+
+
+function _rand_matroid_knu74_closed(m, P; rng=default_rng())
     r::Int = 1
     F::Vector{Family} = [Family([BitSet()])]
     E::BitSet = BitSet(1:m)
@@ -220,21 +235,8 @@ function rand_matroid_knu74_1(m, P; rng=default_rng())
     return ClosedSetsMatroid(m, r - 1, F, rank)
 end
 
-rand_matroid_knu74_1(V::Profile, P; kwds...) = rand_matroid_knu74_1(ni(V), P, kwds...)
-rand_matroid_knu74_1(n, m, P; kwds...) = [rand_matroid_knu74_1(m, P, kwds...) for _ in 1:n]
 
-
-"""
-    rand_matroid_knu74_2(m, P; rng=default_rng())
-    rand_matroid_knu74_2(V::Profile, P; ...)
-    rand_matroid_knu74_2(n, m, P; kwds...)
-
-Randomized version of Knuth's matroid construction, that also keeps track of
-independent sets. This entails keeping storing the whole power set of the ground
-set in the rank table, and quickly becomes infeasible for values of `m` much
-larger than 16.
-"""
-function rand_matroid_knu74_2(m, P; rng=default_rng())
+function _rand_matroid_knu74_full(m, P; rng=default_rng())
     r::Int = 1
     E::BitSet = BitSet(1:m)
     rank::Dict{BitSet,Int} = Dict(BitSet() => 0)
@@ -261,9 +263,6 @@ function rand_matroid_knu74_2(m, P; rng=default_rng())
 
     return FullMatroid(m, r - 1, F, I, Set(), rank)
 end
-
-rand_matroid_knu74_2(V::Profile, P; kwds...) = rand_matroid_knu74_2(ni(V), P, kwds...)
-rand_matroid_knu74_2(n, m, P; kwds...) = [rand_matroid_knu74_2(m, P, kwds...) for _ in 1:n]
 
 
 # Generates minimal closed sets for rank r+1 and inserts them into F[r+1],
