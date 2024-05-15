@@ -4,22 +4,20 @@ abstract type Matroid end
 struct ClosedSetsMatroid <: Matroid
     n::Integer # Size of universe
     r::Integer # Final rank (r == length(F)).
-    F::Vector{Set{AbstractSet{Int}}} # Closed sets by rank
-    rank::Dict{AbstractSet{Int},Integer} # Mapping from sets to rank.
+    F::Vector{Set{BitSet}} # Closed sets by rank
 end
-Base.copy(M::ClosedSetsMatroid) = ClosedSetsMatroid(M.n, M.r, M.F, M.rank)
+Base.copy(M::ClosedSetsMatroid) = ClosedSetsMatroid(M.n, M.r, M.F)
 
 
 struct FullMatroid <: Matroid
     n::Integer
     r::Integer
-    F::Vector{Set{AbstractSet{Int}}} # Closed sets by rank
-    I::Vector{Set{AbstractSet{Int}}} # Independent sets by rank
-    C::Set{AbstractSet{Int}} # Circuits
-    rank::Dict{AbstractSet{Int},Integer}
+    F::Vector{Set{BitSet}} # Closed sets by rank
+    I::Vector{Set{BitSet}} # Independent sets by rank
+    C::Union{Nothing,Set{BitSet}} # Circuits
 end
 
-Base.copy(M::FullMatroid) = FullMatroid(M.n, M.r, M.F, M.I, M.C, M.rank)
+Base.copy(M::FullMatroid) = FullMatroid(M.n, M.r, M.F, M.I, M.C)
 
 
 struct GraphicMatroid <: Matroid
