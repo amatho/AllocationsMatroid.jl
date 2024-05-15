@@ -144,6 +144,10 @@ rand_matroid_er59(V::Profile; kwds...) = rand_matroid_er59(ni(V), kwds...)
 rand_matroid_er59(n, m; kwds...) = [rand_matroid_er59(m, kwds...) for _ in 1:n]
 
 
+# Type alias for a set of bitsets.
+const Family = Set{BitSet}
+
+
 """
     knuth_matroid(m, X)
     knuth_matroid(V::Profile, X)
@@ -153,26 +157,21 @@ sets, given by the size of the universe `m` and a list of enlargements `X`.
 """
 function knuth_matroid(m, X)
     r::Int = 1 # r is current rank +1 due to 1-indexing.
-    F::Vector{Set{BitSet}} = [Set([BitSet()])]
+    F::Vector{Family} = [Family([BitSet()])]
     E::BitSet = BitSet(1:m)
     rank::Dict{BitSet,Int} = Dict(BitSet() => 0)
 
     while E ∉ F[r]
         # Initialize F[r+1].
-        push!(F, Set{BitSet}())
+        push!(F, Family())
 
-        # Setup add_set.
-        add_callback = let r = r, rank = rank
-            x -> rank[x] = r
-        end
-
-        generate_covers!(E, F, r, rank, add_callback)
+        _generate_covers!(F, rank, r, E)
 
         # Perform enlargements.
         if r <= length(X)
             if X[r] !== nothing
                 for x in X[r]
-                    add_set!(x, F, r, rank, add_callback)
+                    _add_set!(F, rank, x, r)
                 end
             end
         end
@@ -198,7 +197,7 @@ denotes the number of coarsenings to apply at rank `i`.
 """
 function rand_matroid_knu74_1(m, P; rng=default_rng())
     r::Int = 1
-    F::Vector{Set{BitSet}} = [Set([BitSet()])]
+    F::Vector{Family} = [Family([BitSet()])]
     E::BitSet = BitSet(1:m)
     rank::Dict{BitSet,Int} = Dict(BitSet() => 0)
 
@@ -206,17 +205,13 @@ function rand_matroid_knu74_1(m, P; rng=default_rng())
         r > m && @warn "Rank is larger than universe!" m r
 
         # Initialize F[r+1].
-        push!(F, Set{BitSet}())
+        push!(F, Family())
 
-        add_callback = let r = r, rank = rank
-            x -> rank[x] = r
-        end
-
-        generate_covers!(E, F, r, rank, add_callback)
+        _generate_covers!(F, rank, r, E)
 
         # Perform coarsening.
         if r <= length(P)
-            coarsen!(E, F, r, rank, P[r], add_callback, rng=rng)
+            _coarsen!(F, rank, P[r], r, E, rng=rng)
         end
 
         r += 1
@@ -244,25 +239,21 @@ function rand_matroid_knu74_2(m, P; rng=default_rng())
     E::BitSet = BitSet(1:m)
     rank::Dict{BitSet,Int} = Dict(BitSet() => 0)
 
-    F::Vector{Set{BitSet}} = [Set([BitSet()])]
-    I::Vector{Set{BitSet}} = [Set([BitSet()])]
+    F::Vector{Family} = [Family([BitSet()])]
+    I::Vector{Family} = [Family([BitSet()])]
 
     while E ∉ F[r]
         r > m && @warn "Rank is larger than universe!" m r
 
         # Initialize F[r+1] and I[r+1].
-        push!(F, Set{BitSet}())
-        push!(I, Set{BitSet}())
+        push!(F, Family())
+        push!(I, Family())
 
-        add_callback = let r = r, rank = rank, I = I
-            x -> mark_independent_subsets!(x, I, r, length(x), rank)
-        end
-
-        generate_covers!(E, F, r, rank, add_callback)
+        _generate_covers!(F, rank, r, E, I)
 
         # Perform coarsening.
         if r <= length(P)
-            coarsen!(E, F, r, rank, P[r], add_callback, rng=rng)
+            _coarsen!(F, rank, P[r], r, E, I, rng=rng)
         end
 
         r += 1
@@ -275,14 +266,16 @@ rand_matroid_knu74_2(V::Profile, P; kwds...) = rand_matroid_knu74_2(ni(V), P, kw
 rand_matroid_knu74_2(n, m, P; kwds...) = [rand_matroid_knu74_2(m, P, kwds...) for _ in 1:n]
 
 
-"""
-    generate_covers!(E, F, r, rank, callback)
-
-Generates minimal closed sets for rank r+1 and inserts them into F[r+1], using
-the supplied insert_fn. This function should take one argument, the newly added
-set.
-"""
-function generate_covers!(E, F, r, rank, callback)
+# Generates minimal closed sets for rank r+1 and inserts them into F[r+1],
+# using the supplied insert_fn. This function should take one argument, the
+# newly added set.
+function _generate_covers!(
+    F::Vector{Family},
+    rank::Dict{BitSet,Int},
+    r::Int,
+    E::BitSet,
+    I::Union{Vector{Family},Nothing}=nothing
+)
     for y in F[r]
         t = setdiff(E, y)
         # Find all sets in F[r+1] that already contain y and remove excess
@@ -298,19 +291,23 @@ function generate_covers!(E, F, r, rank, callback)
         # Insert y ∪ a for all a ∈ t.
         while !isempty(t)
             a = minimum(t)
-            add_set!(union(y, a), F, r, rank, callback)
+            _add_set!(F, rank, union(y, a), r, I)
             setdiff!(t, a)
         end
     end
 end
 
 
-"""
-    coarsen!(E, F, r, rank, count, callback; rng=default_rng())
-
-Apply the specified number of coarsenings to the matroid.
-"""
-function coarsen!(E, F, r, rank, count, callback; rng=default_rng())
+# Apply the specified number of coarsenings to the matroid.
+function _coarsen!(
+    F::Vector{Family},
+    rank::Dict{BitSet,Int},
+    count::Int,
+    r::Int,
+    E::BitSet,
+    I::Union{Vector{Family},Nothing}=nothing;
+    rng=default_rng()
+)
     for _ in 1:count
         if E ∈ F[r+1]
             return
@@ -320,12 +317,18 @@ function coarsen!(E, F, r, rank, count, callback; rng=default_rng())
         a = rand(rng, t)
         delete!(F[r+1], A)
 
-        add_set!(union(A, a), F, r, rank, callback)
+        _add_set!(F, rank, union(A, a), r, I)
     end
 end
 
 
-function add_set!(x, F, r, rank, callback)
+function _add_set!(
+    F::Vector{Family},
+    rank::Dict{BitSet,Int},
+    x::BitSet,
+    r::Int,
+    I::Union{Vector{Family},Nothing}=nothing
+)
     done = false
 
     while !done
@@ -361,7 +364,7 @@ function add_set!(x, F, r, rank, callback)
                 if length(x_and_y) < r
                     continue
                 else
-                    r´ = check_rank(x_and_y, r, F)
+                    r´ = _check_rank(F, r, x_and_y)
                     if !isnothing(r´)
                         rank[x_and_y] = r´
                         continue
@@ -378,19 +381,22 @@ function add_set!(x, F, r, rank, callback)
     end
 
     push!(F[r+1], x)
-    callback(x)
+
+    if isnothing(I)
+        rank[x] = r
+    else
+        _add_set_callback!(I, rank, x, r)
+    end
 end
 
 
-"""
-    mark_independent_subsets!(x, I, r, c, rank)
+# Given a closed set x,
+# 1. simply return if rank[x] < r (we've seen this already)
+# 2. add it to I if |x| = r
+# 3. recursively call this func on all x' ⊂ x st |x'| = |x| - 1
+function _add_set_callback!(I::Vector{Family}, rank::Dict{BitSet,Int}, x::BitSet, r::Int)
+    c = length(x)
 
-Given a closed set x,
-1. simply return if rank[x] < r (we've seen this already)
-2. add it to I if |x| = r
-3. recursively call this func on all x' ⊂ x st |x'| = |x| - 1
-"""
-function mark_independent_subsets!(x, I, r, c, rank)
     if haskey(rank, x) && rank[x] <= r
         return
     end
@@ -401,14 +407,14 @@ function mark_independent_subsets!(x, I, r, c, rank)
     t = x
     while !isempty(t)
         v = setdiff(t, minimum(t))
-        mark_independent_subsets!(setdiff(x, minimum(union(t, v))), I, r, c - 1, rank)
+        _add_set_callback!(I, rank, setdiff(x, minimum(union(t, v))), r)
         t = v
     end
 end
 
 
-function check_rank(v, r, F)
-    for (i, Fi) in enumerate(F[1:r])
+function _check_rank(F::Vector{Family}, r::Int, v::BitSet)
+    for (i, Fi) in enumerate(@view F[1:r])
         for z ∈ Fi
             if issubset(v, z)
                 return i - 1
@@ -445,13 +451,13 @@ function knuth_matroid_erect(m, enlargements)
         k = k + k
     end
 
-    F = [Set([BitSet()])] # F[r] is the family of closed sets of rank r-1.
-    I = [Set([BitSet()])] # I[r] is the family of independent sets of rank r-1.
+    F = [Family([BitSet()])] # F[r] is the family of closed sets of rank r-1.
+    I = [Family([BitSet()])] # I[r] is the family of independent sets of rank r-1.
     rank[BitSet()] = 0
 
     while mask ∉ F[r]
-        push!(F, Set{BitSet}())
-        push!(I, Set{BitSet}())
+        push!(F, Family())
+        push!(I, Family())
 
         # Generate minimal closed sets for rank r+1.
         for y in F[r] # y is a closed set of rank r.
@@ -486,7 +492,7 @@ function knuth_matroid_erect(m, enlargements)
         r += 1
     end
 
-    C = Set{BitSet}() # C is the set of circuits (minimal dependent sets) for M.
+    C = Family() # C is the set of circuits (minimal dependent sets) for M.
     k = 1
     while k <= mask_bits
         for i in 0:k-1
