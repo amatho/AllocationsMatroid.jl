@@ -179,7 +179,7 @@ function knuth_matroid(m, X)
         r += 1
     end
 
-    return ClosedSetsMatroid(m, r - 1, F, rank)
+    return ClosedSetsMatroid(m, r - 1, F)
 end
 
 knuth_matroid(V::Profile, X) = knuth_matroid(ni(V), X)
@@ -232,7 +232,7 @@ function _rand_matroid_knu74_closed(m, P; rng=default_rng())
         r += 1
     end
 
-    return ClosedSetsMatroid(m, r - 1, F, rank)
+    return ClosedSetsMatroid(m, r - 1, F)
 end
 
 
@@ -261,7 +261,7 @@ function _rand_matroid_knu74_full(m, P; rng=default_rng())
         r += 1
     end
 
-    return FullMatroid(m, r - 1, F, I, Set(), rank)
+    return FullMatroid(m, r - 1, F, I, nothing)
 end
 
 
@@ -291,7 +291,7 @@ function _generate_covers!(
         while !isempty(t)
             a = minimum(t)
             _add_set!(F, rank, union(y, a), r, I)
-            setdiff!(t, a)
+            delete!(t, a)
         end
     end
 end
@@ -373,7 +373,7 @@ function _add_set!(
 
             # x ∩ y has rank > r, replace with x ∪ y.
             delete!(F[r+1], y)
-            x = union(x, y)
+            union!(x, y)
             done = false
             break
         end
@@ -505,7 +505,7 @@ function knuth_matroid_erect(m, enlargements)
         k += k
     end
 
-    return FullMatroid(m, r - 1, F, I, C, rank)
+    return FullMatroid(m, r - 1, F, I, C)
 end
 
 knuth_matroid_erect(V::Profile, enlargements) = knuth_matroid_erect(ni(V), enlargements)
