@@ -15,7 +15,8 @@ using Allocations: Symmetry, Symmetric, Asymmetric, SymmetrizedConstraint
 
 # For matroid tests:
 using Allocations: matroid_partition_knuth73, find_shortest_path,
-                   exchange_graph, knuth_matroid, knuth_matroid_erect
+                   exchange_graph, knuth_matroid, knuth_matroid_erect,
+                   matroid_c1, matroid_c2, matroid_c3
 
 # Shorthand for matroid tests:
 const btos = Allocations.bits_to_set
@@ -1318,6 +1319,19 @@ end
         @test result[3] == F2
         @test result[4] == F3
         @test result[5] == F4
+    end
+
+    @testset "Random matroid generation" begin
+        Ms = []
+        append!(Ms, rand_matroid_knu74(10, 10, [0, 6], track_indep=false))
+        append!(Ms, rand_matroid_knu74(10, 10, [0, 6], track_indep=true))
+
+        # Check axioms for full and closed matroids.
+        for M in Ms
+            @test matroid_c1(M)
+            @test matroid_c2(M)
+            @test matroid_c3(M)
+        end
     end
 
 end
