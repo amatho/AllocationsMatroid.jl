@@ -119,7 +119,7 @@ rand_conflicts_ba02(V::Profile; kwds...) = rand_conflicts_ba02(ni(V), kwds...)
 """
     rand_matroid_er59(m; n=nothing, rng=default_rng())
     rand_matroid_er59(V::Profile; ...)
-    rand_matroid_er59(n, m; kwds...)
+    rand_matroid_er59(n, m; ...)
 
 Generate a random `GraphicMatroid`, whose underlying graph is constructed
 according to the [Erdős–Rényi model
@@ -186,9 +186,9 @@ knuth_matroid(V::Profile, X) = knuth_matroid(ni(V), X)
 
 
 """
-    rand_matroid_knu74(m, P; rng=default_rng())
+    rand_matroid_knu74(m, P; track_indep=false, rng=default_rng())
     rand_matroid_knu74(V::Profile, P; ...)
-    rand_matroid_knu74(n, m, P; kwds...)
+    rand_matroid_knu74(n, m, P; ...)
 
 Randomized version of Knuth's matroid construction. Random matroids are
 generated via the method of random coarsening described in the 1974 paper.
@@ -208,6 +208,32 @@ end
 
 rand_matroid_knu74(V::Profile, P; kwds...) = rand_matroid_knu74(ni(V), P; kwds...)
 rand_matroid_knu74(n, m, P; kwds...) = [rand_matroid_knu74(m, P; kwds...) for _ in 1:n]
+
+
+function rand_matroid_coarsening(m, r; rng=default_rng())
+    P = [0]
+    diff = m - r
+    if diff <= 0
+        return P
+    end
+    remainder = diff - sum(P)
+
+    for _ in 1:r-2
+        x = rand(rng, 1:remainder)
+        push!(P, x)
+        remainder -= x
+        if remainder <= 0
+            break
+        end
+    end
+
+    if remainder > 0
+        push!(P, remainder)
+    end
+
+    @views sort!(P[2:end], rev=true)
+    return P
+end
 
 
 function _rand_matroid_knu74_closed(m, P; rng=default_rng())
