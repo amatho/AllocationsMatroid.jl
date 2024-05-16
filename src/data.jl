@@ -190,15 +190,17 @@ knuth_matroid(V::Profile, X) = knuth_matroid(ni(V), X)
     rand_matroid_knu74(V::Profile, P; ...)
     rand_matroid_knu74(n, m, P; ...)
 
-Randomized version of Knuth's matroid construction. Random matroids are
-generated via the method of random coarsening described in the 1974 paper.
-Accepts the size of the universe `m`, and a list `P = [p₁, p₂, …]`, where `pᵢ`
-denotes the number of coarsenings to apply at rank `i`.
+Generate a random `Matroid` based on the process described in [Knuth's 1974
+paper](https://doi.org/10.1016/0012-365X(75)90075-8). The matroid will have a
+ground set of `1:m`.
 
-The keyword argument `track_indep` controls whether the matroid generation
-should keep track of independent sets under construction.
+The keyword argument `r` specifies the target rank for the matroid, and is by
+default `m ÷ 2`. `track_indep` controls whether the matroid generation should
+keep track of independent sets under construction.
 """
-function rand_matroid_knu74(m, P; track_indep=false, rng=default_rng())
+function rand_matroid_knu74(m; r=m÷2, track_indep=false, rng=default_rng())
+    P = rand_matroid_coarsening(m, r)
+
     if track_indep
         return _rand_matroid_knu74_full(m, P, rng=rng)
     else
@@ -206,10 +208,17 @@ function rand_matroid_knu74(m, P; track_indep=false, rng=default_rng())
     end
 end
 
-rand_matroid_knu74(V::Profile, P; kwds...) = rand_matroid_knu74(ni(V), P; kwds...)
-rand_matroid_knu74(n, m, P; kwds...) = [rand_matroid_knu74(m, P; kwds...) for _ in 1:n]
+rand_matroid_knu74(V::Profile; kwds...) = rand_matroid_knu74(ni(V); kwds...)
+rand_matroid_knu74(n, m; kwds...) = [rand_matroid_knu74(m; kwds...) for _ in 1:n]
 
 
+"""
+    rand_matroid_coarsening(m, r; rng=default_rng())
+
+Generate a random coarsening `P` that achieves the given rank `r` for a matroid
+of `m` items. The list `P = [p₀, p₁, …]` will be generated such that `p₀ = 0`,
+and `p₁, p₂, …` will be non-increasing.
+"""
 function rand_matroid_coarsening(m, r; rng=default_rng())
     P = [0]
     diff = m - r
