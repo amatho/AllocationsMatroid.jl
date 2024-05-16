@@ -16,6 +16,7 @@ using Random: default_rng
 
 include("exports.jl")
 include("conf.jl")
+include("smallbitset.jl")
 include("matroids.jl")
 include("types.jl")
 include("util.jl")

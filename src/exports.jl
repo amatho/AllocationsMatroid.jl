@@ -20,6 +20,7 @@ export
     Profile,
     Reduction,
     Required,
+    SmallBitSet,
     Submodular,
     Symmetry,
     Symmetric,

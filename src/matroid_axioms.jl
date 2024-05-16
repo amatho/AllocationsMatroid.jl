@@ -34,7 +34,7 @@ If A ∈ F and a, b ∈ E - A, then b is a member of all sets containing A ∪ {
 function matroid_c3(m)
     E = ground_set(m)
     F = reduce(∪, m.F)
-    delete!(F, BitSet())
+    delete!(F, SmallBitSet())
     for A ∈ F
         t1 = setdiff(E, A)
         while !isempty(t1)

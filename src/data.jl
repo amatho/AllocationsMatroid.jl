@@ -145,7 +145,7 @@ rand_matroid_er59(n, m; kwds...) = [rand_matroid_er59(m, kwds...) for _ in 1:n]
 
 
 # Type alias for a set of bitsets.
-const Family = Set{BitSet}
+const Family = Set{SmallBitSet}
 
 
 """
@@ -157,9 +157,9 @@ sets, given by the size of the universe `m` and a list of enlargements `X`.
 """
 function knuth_matroid(m, X)
     r::Int = 1 # r is current rank +1 due to 1-indexing.
-    F::Vector{Family} = [Family([BitSet()])]
-    E::BitSet = BitSet(1:m)
-    rank::Dict{BitSet,Int} = Dict(BitSet() => 0)
+    F::Vector{Family} = [Family([SmallBitSet()])]
+    E::SmallBitSet = SmallBitSet(1:m)
+    rank::Dict{SmallBitSet,Int} = Dict(SmallBitSet() => 0)
 
     while E ∉ F[r]
         # Initialize F[r+1].
@@ -247,9 +247,9 @@ end
 
 function _rand_matroid_knu74_closed(m, P; rng=default_rng())
     r::Int = 1
-    F::Vector{Family} = [Family([BitSet()])]
-    E::BitSet = BitSet(1:m)
-    rank::Dict{BitSet,Int} = Dict(BitSet() => 0)
+    F::Vector{Family} = [Family([SmallBitSet()])]
+    E::SmallBitSet = SmallBitSet(1:m)
+    rank::Dict{SmallBitSet,Int} = Dict(SmallBitSet() => 0)
 
     while E ∉ F[r]
         r > m && @warn "Rank is larger than universe!" m r
@@ -273,11 +273,11 @@ end
 
 function _rand_matroid_knu74_full(m, P; rng=default_rng())
     r::Int = 1
-    E::BitSet = BitSet(1:m)
-    rank::Dict{BitSet,Int} = Dict(BitSet() => 0)
+    E::SmallBitSet = SmallBitSet(1:m)
+    rank::Dict{SmallBitSet,Int} = Dict(SmallBitSet() => 0)
 
-    F::Vector{Family} = [Family([BitSet()])]
-    I::Vector{Family} = [Family([BitSet()])]
+    F::Vector{Family} = [Family([SmallBitSet()])]
+    I::Vector{Family} = [Family([SmallBitSet()])]
 
     while E ∉ F[r]
         r > m && @warn "Rank is larger than universe!" m r
@@ -305,9 +305,9 @@ end
 # newly added set.
 function _generate_covers!(
     F::Vector{Family},
-    rank::Dict{BitSet,Int},
+    rank::Dict{SmallBitSet,Int},
     r::Int,
-    E::BitSet,
+    E::SmallBitSet,
     I::Union{Vector{Family},Nothing}=nothing
 )
     for y in F[r]
@@ -335,10 +335,10 @@ end
 # Apply the specified number of coarsenings to the matroid.
 function _coarsen!(
     F::Vector{Family},
-    rank::Dict{BitSet,Int},
+    rank::Dict{SmallBitSet,Int},
     count::Int,
     r::Int,
-    E::BitSet,
+    E::SmallBitSet,
     I::Union{Vector{Family},Nothing}=nothing;
     rng=default_rng()
 )
@@ -358,8 +358,8 @@ end
 
 function _add_set!(
     F::Vector{Family},
-    rank::Dict{BitSet,Int},
-    x::BitSet,
+    rank::Dict{SmallBitSet,Int},
+    x::SmallBitSet,
     r::Int,
     I::Union{Vector{Family},Nothing}=nothing
 )
@@ -428,7 +428,7 @@ end
 # 1. simply return if rank[x] < r (we've seen this already)
 # 2. add it to I if |x| = r
 # 3. recursively call this func on all x' ⊂ x st |x'| = |x| - 1
-function _add_set_callback!(I::Vector{Family}, rank::Dict{BitSet,Int}, x::BitSet, r::Int)
+function _add_set_callback!(I::Vector{Family}, rank::Dict{SmallBitSet,Int}, x::SmallBitSet, r::Int)
     c = length(x)
 
     if haskey(rank, x) && rank[x] <= r
@@ -447,7 +447,7 @@ function _add_set_callback!(I::Vector{Family}, rank::Dict{BitSet,Int}, x::BitSet
 end
 
 
-function _check_rank(F::Vector{Family}, r::Int, v::BitSet)
+function _check_rank(F::Vector{Family}, r::Int, v::SmallBitSet)
     for (i, Fi) in enumerate(@view F[1:r])
         for z ∈ Fi
             if issubset(v, z)
@@ -471,12 +471,12 @@ infeasible for values of n much larger than 16.
 function knuth_matroid_erect(m, enlargements)
     # Initialize.
     r::Int = 1
-    mask::BitSet = BitSet(1:m)
+    mask::SmallBitSet = SmallBitSet(1:m)
     mask_bits::Int = 2^m - 1
-    rank::Dict{BitSet,Int} = Dict()
+    rank::Dict{SmallBitSet,Int} = Dict()
 
     # Populate rank table with 100+cardinality for all subsets of E.
-    rank[BitSet()] = 100
+    rank[SmallBitSet()] = 100
     k = 1
     while (k <= mask_bits)
         for i in 0:k-1
@@ -485,9 +485,9 @@ function knuth_matroid_erect(m, enlargements)
         k = k + k
     end
 
-    F = [Family([BitSet()])] # F[r] is the family of closed sets of rank r-1.
-    I = [Family([BitSet()])] # I[r] is the family of independent sets of rank r-1.
-    rank[BitSet()] = 0
+    F = [Family([SmallBitSet()])] # F[r] is the family of closed sets of rank r-1.
+    I = [Family([SmallBitSet()])] # I[r] is the family of independent sets of rank r-1.
+    rank[SmallBitSet()] = 0
 
     while mask ∉ F[r]
         push!(F, Family())
@@ -602,18 +602,4 @@ function unmark!(m, card, rank, mask)
             t = v
         end
     end
-end
-
-
-function set_to_bits(S)
-    if length(S) == 0
-        return 0
-    end
-
-    reduce(+, (2^(x - 1) for x in S), init=0)
-end
-
-
-function bits_to_set(S::Integer)
-    BitSet(i for (i, c) in enumerate(digits(S, base=2)) if c == 1)
 end

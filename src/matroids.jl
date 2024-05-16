@@ -4,7 +4,7 @@ abstract type Matroid end
 struct ClosedSetsMatroid <: Matroid
     n::Integer # Size of universe
     r::Integer # Final rank (r == length(F)).
-    F::Vector{Set{BitSet}} # Closed sets by rank
+    F::Vector{Set{SmallBitSet}} # Closed sets by rank
 end
 Base.copy(M::ClosedSetsMatroid) = ClosedSetsMatroid(M.n, M.r, M.F)
 
@@ -12,9 +12,9 @@ Base.copy(M::ClosedSetsMatroid) = ClosedSetsMatroid(M.n, M.r, M.F)
 struct FullMatroid <: Matroid
     n::Integer
     r::Integer
-    F::Vector{Set{BitSet}} # Closed sets by rank
-    I::Vector{Set{BitSet}} # Independent sets by rank
-    C::Union{Nothing,Set{BitSet}} # Circuits
+    F::Vector{Set{SmallBitSet}} # Closed sets by rank
+    I::Vector{Set{SmallBitSet}} # Independent sets by rank
+    C::Union{Nothing,Set{SmallBitSet}} # Circuits
 end
 
 Base.copy(M::FullMatroid) = FullMatroid(M.n, M.r, M.F, M.I, M.C)
@@ -50,8 +50,8 @@ FreeMatroid(n) = UniformMatroid(n, n)
 ZeroMatroid(n) = UniformMatroid(n, 0)
 
 
-ground_set(M::ClosedSetsMatroid) = BitSet(1:M.n)
-ground_set(M::FullMatroid) = BitSet(1:M.n)
+ground_set(M::ClosedSetsMatroid) = SmallBitSet(1:M.n)
+ground_set(M::FullMatroid) = SmallBitSet(1:M.n)
 ground_set(M::UniformMatroid) = BitSet(1:M.n)
 ground_set(M::GraphicMatroid) = BitSet(1:M.n)
 
