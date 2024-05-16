@@ -1323,8 +1323,8 @@ end
 
     @testset "Random matroid generation" begin
         Ms = []
-        append!(Ms, rand_matroid_knu74(10, 10, [0, 6], track_indep=false))
-        append!(Ms, rand_matroid_knu74(10, 10, [0, 6], track_indep=true))
+        append!(Ms, rand_matroid_knu74(10, 10, track_indep=false))
+        append!(Ms, rand_matroid_knu74(10, 10, track_indep=true))
 
         # Check axioms for full and closed matroids.
         for M in Ms
