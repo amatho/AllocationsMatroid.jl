@@ -60,7 +60,7 @@ end
 
 function Base.union!(s::SmallBitSet, r::AbstractUnitRange{<:Integer})
     a, b = first(r), last(r)
-    a, b = max(a, 1), min(b, 63)
+    a, b = max(a, 1), min(b, 64)
     diff = b - a
     bits = (~0 >>> (63 - diff)) << (a - 1)
     s.bits |= bits
