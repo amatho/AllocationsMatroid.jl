@@ -186,7 +186,7 @@ knuth_matroid(V::Profile, X) = knuth_matroid(ni(V), X)
 
 
 """
-    rand_matroid_knu74(m; r=m÷2, track_indep=false, rng=default_rng())
+    rand_matroid_knu74(m; r=2:m÷2, track_indep=false, rng=default_rng())
     rand_matroid_knu74(V::Profile; ...)
     rand_matroid_knu74(n, m; ...)
 
@@ -194,12 +194,13 @@ Generate a random `Matroid` based on the process described in [Knuth's 1974
 paper](https://doi.org/10.1016/0012-365X(75)90075-8). The matroid will have a
 ground set of `1:m`.
 
-The keyword argument `r` specifies the target rank for the matroid, and is by
-default `m ÷ 2`. `track_indep` controls whether the matroid generation should
-keep track of independent sets under construction.
+The keyword argument `r` specifies the possible values for the target rank of
+the matroid, and is by default `2:m÷2`. `track_indep` controls whether the
+matroid generation should keep track of independent sets under construction.
 """
-function rand_matroid_knu74(m; r=m÷2, track_indep=false, rng=default_rng())
-    P = rand_matroid_coarsening(m, r, rng=rng)
+function rand_matroid_knu74(m; r=2:m÷2, track_indep=false, rng=default_rng())
+    rr = rand(rng, r)
+    P = rand_matroid_coarsening(m, rr, rng=rng)
 
     if track_indep
         return _rand_matroid_knu74_full(m, P, rng=rng)
