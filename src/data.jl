@@ -221,16 +221,16 @@ of `m` items. The list `P = [p₀, p₁, …]` will be generated such that `p₀
 and `p₁, p₂, …` will be non-increasing.
 """
 function rand_matroid_coarsening(m, r; rng=default_rng())
-    P = [0]
-    diff = m - r
-    if diff <= 0
+    P = zeros(Int, r + 1)
+    diff = m - r - 1
+    if diff <= 0 || r == 0
         return P
     end
     remainder = diff - sum(P)
 
-    for _ in 1:r-2
-        x = rand(rng, 1:remainder)
-        push!(P, x)
+    for i in 2:r+1
+        x = rand(rng, 1:diff)
+        P[i] = x
         remainder -= x
         if remainder <= 0
             break
@@ -238,7 +238,8 @@ function rand_matroid_coarsening(m, r; rng=default_rng())
     end
 
     if remainder > 0
-        push!(P, remainder)
+        i = rand(rng, 2:max(r+1, 2))
+        P[i] += remainder
     end
 
     @views sort!(P[2:end], rev=true)
