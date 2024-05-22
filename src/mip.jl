@@ -15,9 +15,10 @@ mutable struct MIPContext{V <: Additive, M, A, S}
     objectives::Vector{Any}
     alloc::Union{Allocation, Nothing}
     callbacks::Vector{Function}
+    added_constraints::Int # TODO: Consider removing before merging to upstream
     res::NamedTuple
 end
-MIPContext(v, a, m, s) = MIPContext(v, a, m, s, [], nothing, Function[], (;))
+MIPContext(v, a, m, s) = MIPContext(v, a, m, s, [], nothing, Function[], 0, (;))
 
 
 na(ctx::MIPContext) = na(ctx.profile)
@@ -122,6 +123,9 @@ function solve_mip(ctx; ϵ=1e-5, check=nothing)
     end
 
     isnothing(check) || check(ctx.alloc)
+
+    # TODO: Consider removing before merging to upstream
+    ctx.res = (added_constraints=ctx.added_constraints, ctx.res...)
 
     return ctx
 
@@ -400,6 +404,7 @@ function matroid_fix_constraint(ctx, cb_data, M, i)
         bundle_rank = rank(M, bundle)
         con = @build_constraint(sum(A[i, g] for g in bundle) <= bundle_rank)
         MOI.submit(model, MOI.LazyConstraint(cb_data), con)
+        ctx.added_constraints += 1
     end
 end
 
