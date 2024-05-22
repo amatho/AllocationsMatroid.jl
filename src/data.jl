@@ -393,16 +393,19 @@ function _add_set!(
                     If not, remove Y from F[r+1] and call this function on X ∪ Y.
             """
 
-            x_and_y = intersect(x, y)
-            if haskey(rank, x_and_y) && rank[x_and_y] < r
-                continue
-            elseif !haskey(rank, x_and_y)
-                if length(x_and_y) < r
+            xy = intersect(x, y)
+            xy_rank = get(rank, xy, nothing)
+            if !isnothing(xy_rank)
+                if xy_rank < r
+                    continue
+                end
+            else
+                if length(xy) < r
                     continue
                 else
-                    r´ = _check_rank(F, r, x_and_y)
+                    r´ = _check_rank(F, r, xy)
                     if !isnothing(r´)
-                        rank[x_and_y] = r´
+                        rank[xy] = r´
                         continue
                     end
                 end

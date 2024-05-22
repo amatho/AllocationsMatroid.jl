@@ -2,6 +2,7 @@ mutable struct SmallBitSet <: AbstractSet{Int}
     bits::UInt64
 
     SmallBitSet() = new(0)
+    SmallBitSet(bits::UInt64) = new(bits)
 end
 
 SmallBitSet(itr) = union!(SmallBitSet(), itr)
@@ -17,7 +18,7 @@ function Base.copy!(dest::SmallBitSet, src::SmallBitSet)
     dest.bits = src.bits
     return dest
 end
-Base.copy(s::SmallBitSet) = copy!(SmallBitSet(), s)
+Base.copy(s::SmallBitSet) = SmallBitSet(s.bits)
 Base.copymutable(s::SmallBitSet) = copy(s)
 
 function Base.length(s::SmallBitSet)
@@ -74,7 +75,7 @@ function Base.intersect!(s1::SmallBitSet, s2::SmallBitSet)
     return s1
 end
 
-Base.intersect(s1::SmallBitSet, s2::SmallBitSet) = intersect!(copy(s1), s2)
+Base.intersect(s1::SmallBitSet, s2::SmallBitSet) = SmallBitSet(s1.bits & s2.bits)
 
 function Base.setdiff!(s1::SmallBitSet, s2::SmallBitSet)
     s1.bits &= ~s2.bits
@@ -96,6 +97,10 @@ Base.last(s::SmallBitSet) = _prev_index(s.bits, 63)
 Base.minimum(s::SmallBitSet) = first(s)
 Base.maximum(s::SmallBitSet) = last(s)
 Base.extrema(s::SmallBitSet) = (first(s), last(s))
+
+Base.:(==)(x::SmallBitSet, y::SmallBitSet) = x.bits == y.bits
+Base.isequal(x::SmallBitSet, y::SmallBitSet) = isequal(x.bits, y.bits)
+Base.hash(x::SmallBitSet, h::UInt) = hash(x.bits, hash(:SmallBitSet, h))
 
 @inline _from_index(x::Integer) = unsigned(1 << (x - 1))
 @inline _in_bounds(x::Integer) = x > 0 && x <= 64
