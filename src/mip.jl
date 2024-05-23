@@ -125,7 +125,7 @@ function solve_mip(ctx; ϵ=1e-5, check=nothing)
     isnothing(check) || check(ctx.alloc)
 
     # TODO: Consider removing before merging to upstream
-    ctx.res = (added_constraints=ctx.added_constraints, ctx.res...)
+    ctx.res = (ctx.res..., added_constraints=ctx.added_constraints)
 
     return ctx
 
@@ -806,7 +806,8 @@ function mms(V::Additive, i, C=nothing; solver=conf.MIP_SOLVER, kwds...)
     res = alloc_mm(Vᵢ, Cᵢ; solver=solver, kwds...,
                    min_bundle=minbᵢ, max_bundle=maxbᵢ)
 
-    return (mms=res.mm, model=res.model)
+    # TODO: Remove `added_constraints` before merge
+    return (mms=res.mm, model=res.model, added_constraints=res.added_constraints)
 
 end
 
@@ -913,11 +914,16 @@ function alloc_mms(V::Additive, C=nothing; cutoff=false, solver=conf.MIP_SOLVER,
         solver = solver,
         kwds...)
 
+    # TODO: Remove before merge
+    mms_added_constraints = [res.added_constraints for res in ress]
+
     return (alloc       = res.alloc,
             model       = res.model,
             mms_models  = mms_models,
             alpha       = res.mm,
-            mmss        = mmss)
+            mmss        = mmss,
+            added_constraints = res.added_constraints, # TODO: Remove before merge
+            mms_added_constraints = mms_added_constraints) # TODO: Remove before merge
 
 end
 
