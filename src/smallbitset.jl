@@ -90,7 +90,8 @@ end
 Base.issubset(a::SmallBitSet, b::SmallBitSet) = a.bits == a.bits & b.bits
 Base.:⊊(a::SmallBitSet, b::SmallBitSet) = a.bits <= b.bits && a.bits != b.bits
 
-@inline Base.in(x::Integer, s::SmallBitSet) = _get_index(s.bits, x)
+@inline Base.in(x::Int, s::SmallBitSet) = _in_bounds(x) ? _get_index(s.bits, x) : false
+@inline Base.in(x::Integer, s::SmallBitSet) = _in_bounds(x) ? _get_index(s.bits, x) : false
 
 Base.first(s::SmallBitSet) = _next_index(s.bits, 0)
 Base.last(s::SmallBitSet) = _prev_index(s.bits, 63)
@@ -100,7 +101,6 @@ Base.extrema(s::SmallBitSet) = (first(s), last(s))
 
 Base.:(==)(x::SmallBitSet, y::SmallBitSet) = x.bits == y.bits
 Base.isequal(x::SmallBitSet, y::SmallBitSet) = isequal(x.bits, y.bits)
-Base.hash(x::SmallBitSet, h::UInt) = hash(x.bits, hash(:SmallBitSet, h))
 
 @inline _from_index(x::Integer) = unsigned(1 << (x - 1))
 @inline _in_bounds(x::Integer) = x > 0 && x <= 64
