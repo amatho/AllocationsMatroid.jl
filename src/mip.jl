@@ -266,6 +266,16 @@ achieve_ggi(wt) = function(ctx)
 end
 
 
+# Set up objective for maximum utilitarian welfare (MUW).
+function achieve_muw(ctx)
+    V, A, model = ctx.profile, ctx.alloc_var, ctx.model
+
+    @objective(model, Max, utility(V, A))
+
+    return ctx
+end
+
+
 ## Objective-preserving pipeline steps (enforce_...)
 
 # How `enforce` works depends on whether a constraint is symmetric or not.
@@ -992,4 +1002,32 @@ function alloc_ggi(V, C=nothing; wt=wt_gini, solver=conf.MIP_SOLVER, kwds...)
     solve_mip |>
     ggi_result
 
+end
+
+
+function rand_mip_result(ctx)
+    return (profile=ctx.profile, alloc=ctx.alloc, model=ctx.model, ctx.res...)
+end
+
+
+function alloc_rand_mip(V, C=nothing; solver=conf.MIP_SOLVER, kwds...)
+    n, m = na(V), ni(V)
+
+    alloc = alloc_rand(n, m).alloc
+
+    π = randperm(m)
+    π = 2 .^ π
+
+    X = ones(n, m)
+    for g in items(V), i in owners(alloc, g)
+        X[i, g] = π[g]
+    end
+
+    V = Profile(X)
+
+    init_mip(V, solver; kwds...) |>
+    achieve_muw |>
+    enforce(C) |>
+    solve_mip |>
+    rand_mip_result
 end
