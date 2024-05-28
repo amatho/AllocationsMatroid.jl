@@ -100,7 +100,8 @@ init_mip(V::Matrix, solver; kwds...) = init_mip(Additive(V), solver; kwds...)
 function solve_mip(ctx; ϵ=1e-5, check=nothing)
 
     if !isempty(ctx.callbacks)
-        set_attribute(ctx.model, MOI.LazyConstraintCallback(), cb_data -> lazy_constraint_callback(ctx, cb_data))
+        set_attribute(ctx.model, MOI.LazyConstraintCallback(),
+            cb_data -> lazy_constraint_callback(ctx, cb_data))
     end
 
     if isempty(ctx.objectives)
@@ -1010,16 +1011,19 @@ function rand_mip_result(ctx)
 end
 
 
-function alloc_rand_mip(V, C=nothing; solver=conf.MIP_SOLVER, kwds...)
+function alloc_rand_mip(V, C=nothing; solver=conf.MIP_SOLVER, rng=default_rng(),
+        kwds...)
+
     n, m = na(V), ni(V)
 
-    alloc = alloc_rand(n, m).alloc
+    # Tentative allocation
+    A = alloc_rand(n, m).alloc
 
-    π = randperm(m)
+    π = randperm(rng, m)
     π = 2 .^ π
 
     X = ones(n, m)
-    for g in items(V), i in owners(alloc, g)
+    for g in items(V), i in owners(A, g)
         X[i, g] = π[g]
     end
 
