@@ -50,8 +50,8 @@ FreeMatroid(n) = UniformMatroid(n, n)
 ZeroMatroid(n) = UniformMatroid(n, 0)
 
 
-ground_set(M::ClosedSetsMatroid) = SmallBitSet(1:M.n)
-ground_set(M::FullMatroid) = SmallBitSet(1:M.n)
+ground_set(M::ClosedSetsMatroid) = SmallBitSet{UInt64}(1:M.n)
+ground_set(M::FullMatroid) = SmallBitSet{UInt64}(1:M.n)
 ground_set(M::UniformMatroid) = BitSet(1:M.n)
 ground_set(M::GraphicMatroid) = BitSet(1:M.n)
 

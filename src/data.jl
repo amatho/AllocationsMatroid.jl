@@ -145,7 +145,7 @@ rand_matroid_er59(n, m; kwds...) = [rand_matroid_er59(m, kwds...) for _ in 1:n]
 
 
 # Type alias for a set of bitsets.
-const Family = Set{SmallBitSet}
+const Family{T} = Set{SmallBitSet{T}}
 
 
 """
@@ -155,15 +155,15 @@ const Family = Set{SmallBitSet}
 Knuth's matroid construction (1974). Generates a matroid in terms of its closed
 sets, given by the size of the universe `m` and a list of enlargements `X`.
 """
-function knuth_matroid(m, X)
+function knuth_matroid(m, X; T=UInt64)
     r::Int = 1 # r is current rank +1 due to 1-indexing.
-    F::Vector{Family} = [Family([SmallBitSet()])]
-    E::SmallBitSet = SmallBitSet(1:m)
-    rank::Dict{SmallBitSet,Int} = Dict(SmallBitSet() => 0)
+    F::Vector{Family{T}} = [Family{T}([SmallBitSet{T}()])]
+    E::SmallBitSet{T} = SmallBitSet{T}(1:m)
+    rank::Dict{SmallBitSet{T},Int} = Dict(SmallBitSet{T}() => 0)
 
     while E ∉ F[r]
         # Initialize F[r+1].
-        push!(F, Family())
+        push!(F, Family{T}())
 
         _generate_covers!(F, rank, r, E)
 
@@ -171,6 +171,8 @@ function knuth_matroid(m, X)
         if r <= length(X)
             if X[r] !== nothing
                 for x in X[r]
+                    # Convert x to a SmallBitSet with correct bit width
+                    x = convert(SmallBitSet{T}, x)
                     _add_set!(F, rank, x, r)
                 end
             end
@@ -198,14 +200,16 @@ The keyword argument `r` specifies the possible values for the target rank of
 the matroid, and is by default `2:m÷2`. `track_indep` controls whether the
 matroid generation should keep track of independent sets under construction.
 """
-function rand_matroid_knu74(m; r=2:m÷2, track_indep=false, rng=default_rng())
+function rand_matroid_knu74(m; r=2:m÷2, track_indep=false, rng=default_rng(),
+        T=UInt64)
+
     rr = rand(rng, r)
     P = rand_matroid_coarsening(m, rr, rng=rng)
 
     if track_indep
-        return _rand_matroid_knu74_full(m, P, rng=rng)
+        return _rand_matroid_knu74_full(m, P, rng=rng, T=T)
     else
-        return _rand_matroid_knu74_closed(m, P, rng=rng)
+        return _rand_matroid_knu74_closed(m, P, rng=rng, T=T)
     end
 end
 
@@ -247,17 +251,17 @@ function rand_matroid_coarsening(m, r; rng=default_rng())
 end
 
 
-function _rand_matroid_knu74_closed(m, P; rng=default_rng())
+function _rand_matroid_knu74_closed(m, P; rng=default_rng(), T=UInt64)
     r::Int = 1
-    F::Vector{Family} = [Family([SmallBitSet()])]
-    E::SmallBitSet = SmallBitSet(1:m)
-    rank::Dict{SmallBitSet,Int} = Dict(SmallBitSet() => 0)
+    F::Vector{Family{T}} = [Family{T}([SmallBitSet{T}()])]
+    E::SmallBitSet{T} = SmallBitSet{T}(1:m)
+    rank::Dict{SmallBitSet{T},Int} = Dict(SmallBitSet{T}() => 0)
 
     while E ∉ F[r]
         r > m && @warn "Rank is larger than universe!" m r
 
         # Initialize F[r+1].
-        push!(F, Family())
+        push!(F, Family{T}())
 
         _generate_covers!(F, rank, r, E)
 
@@ -273,20 +277,20 @@ function _rand_matroid_knu74_closed(m, P; rng=default_rng())
 end
 
 
-function _rand_matroid_knu74_full(m, P; rng=default_rng())
+function _rand_matroid_knu74_full(m, P; rng=default_rng(), T=UInt64)
     r::Int = 1
-    E::SmallBitSet = SmallBitSet(1:m)
-    rank::Dict{SmallBitSet,Int} = Dict(SmallBitSet() => 0)
+    E::SmallBitSet{T} = SmallBitSet{T}(1:m)
+    rank::Dict{SmallBitSet{T},Int} = Dict(SmallBitSet{T}() => 0)
 
-    F::Vector{Family} = [Family([SmallBitSet()])]
-    I::Vector{Family} = [Family([SmallBitSet()])]
+    F::Vector{Family{T}} = [Family{T}([SmallBitSet{T}()])]
+    I::Vector{Family{T}} = [Family{T}([SmallBitSet{T}()])]
 
     while E ∉ F[r]
         r > m && @warn "Rank is larger than universe!" m r
 
         # Initialize F[r+1] and I[r+1].
-        push!(F, Family())
-        push!(I, Family())
+        push!(F, Family{T}())
+        push!(I, Family{T}())
 
         _generate_covers!(F, rank, r, E, I)
 
@@ -306,12 +310,12 @@ end
 # using the supplied insert_fn. This function should take one argument, the
 # newly added set.
 function _generate_covers!(
-    F::Vector{Family},
-    rank::Dict{SmallBitSet,Int},
+    F::Vector{Family{T}},
+    rank::Dict{SmallBitSet{T},Int},
     r::Int,
-    E::SmallBitSet,
-    I::Union{Vector{Family},Nothing}=nothing
-)
+    E::SmallBitSet{T},
+    I::Union{Vector{Family{T}},Nothing}=nothing
+) where {T}
     for y in F[r]
         t = setdiff(E, y)
         # Find all sets in F[r+1] that already contain y and remove excess
@@ -336,14 +340,14 @@ end
 
 # Apply the specified number of coarsenings to the matroid.
 function _coarsen!(
-    F::Vector{Family},
-    rank::Dict{SmallBitSet,Int},
+    F::Vector{Family{T}},
+    rank::Dict{SmallBitSet{T},Int},
     count::Int,
     r::Int,
-    E::SmallBitSet,
-    I::Union{Vector{Family},Nothing}=nothing;
+    E::SmallBitSet{T},
+    I::Union{Vector{Family{T}},Nothing}=nothing;
     rng=default_rng()
-)
+) where {T}
     for _ in 1:count
         if E ∈ F[r+1]
             return
@@ -359,12 +363,12 @@ end
 
 
 function _add_set!(
-    F::Vector{Family},
-    rank::Dict{SmallBitSet,Int},
-    x::SmallBitSet,
+    F::Vector{Family{T}},
+    rank::Dict{SmallBitSet{T},Int},
+    x::SmallBitSet{T},
     r::Int,
-    I::Union{Vector{Family},Nothing}=nothing
-)
+    I::Union{Vector{Family{T}},Nothing}=nothing
+) where {T}
     done = false
 
     while !done
@@ -433,7 +437,12 @@ end
 # 1. simply return if rank[x] < r (we've seen this already)
 # 2. add it to I if |x| = r
 # 3. recursively call this func on all x' ⊂ x st |x'| = |x| - 1
-function _add_set_callback!(I::Vector{Family}, rank::Dict{SmallBitSet,Int}, x::SmallBitSet, r::Int)
+function _add_set_callback!(
+    I::Vector{Family{T}},
+    rank::Dict{SmallBitSet{T},Int},
+    x::SmallBitSet{T},
+    r::Int
+) where {T}
     c = length(x)
 
     if haskey(rank, x) && rank[x] <= r
@@ -452,7 +461,7 @@ function _add_set_callback!(I::Vector{Family}, rank::Dict{SmallBitSet,Int}, x::S
 end
 
 
-function _check_rank(F::Vector{Family}, r::Int, v::SmallBitSet)
+function _check_rank(F::Vector{Family{T}}, r::Int, v::SmallBitSet{T}) where {T}
     for (i, Fi) in enumerate(@view F[1:r])
         for z ∈ Fi
             if issubset(v, z)
@@ -473,15 +482,15 @@ of the matroid during generation.
 This version assigns the Hamming weight of all subsets of E upfront. This is
 infeasible for values of n much larger than 16.
 """
-function knuth_matroid_erect(m, enlargements)
+function knuth_matroid_erect(m, enlargements; T=UInt64)
     # Initialize.
     r::Int = 1
-    mask::SmallBitSet = SmallBitSet(1:m)
+    mask::SmallBitSet{T} = SmallBitSet{T}(1:m)
     mask_bits::Int = 2^m - 1
-    rank::Dict{SmallBitSet,Int} = Dict()
+    rank::Dict{SmallBitSet{T},Int} = Dict()
 
     # Populate rank table with 100+cardinality for all subsets of E.
-    rank[SmallBitSet()] = 100
+    rank[SmallBitSet{T}()] = 100
     k = 1
     while (k <= mask_bits)
         for i in 0:k-1
@@ -490,13 +499,13 @@ function knuth_matroid_erect(m, enlargements)
         k = k + k
     end
 
-    F = [Family([SmallBitSet()])] # F[r] is the family of closed sets of rank r-1.
-    I = [Family([SmallBitSet()])] # I[r] is the family of independent sets of rank r-1.
-    rank[SmallBitSet()] = 0
+    F = [Family{T}([SmallBitSet{T}()])] # F[r] is the family of closed sets of rank r-1.
+    I = [Family{T}([SmallBitSet{T}()])] # I[r] is the family of independent sets of rank r-1.
+    rank[SmallBitSet{T}()] = 0
 
     while mask ∉ F[r]
-        push!(F, Family())
-        push!(I, Family())
+        push!(F, Family{T}())
+        push!(I, Family{T}())
 
         # Generate minimal closed sets for rank r+1.
         for y in F[r] # y is a closed set of rank r.
@@ -531,7 +540,7 @@ function knuth_matroid_erect(m, enlargements)
         r += 1
     end
 
-    C = Family() # C is the set of circuits (minimal dependent sets) for M.
+    C = Family{T}() # C is the set of circuits (minimal dependent sets) for M.
     k = 1
     while k <= mask_bits
         for i in 0:k-1
