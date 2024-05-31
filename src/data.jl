@@ -140,8 +140,8 @@ function rand_matroid_er59(m; verts=nothing, rng=default_rng())
     return GraphicMatroid(G)
 end
 
-rand_matroid_er59(V::Profile; kwds...) = rand_matroid_er59(ni(V), kwds...)
-rand_matroid_er59(n, m; kwds...) = [rand_matroid_er59(m, kwds...) for _ in 1:n]
+rand_matroid_er59(V::Profile; kwds...) = rand_matroid_er59(ni(V); kwds...)
+rand_matroid_er59(n, m; kwds...) = [rand_matroid_er59(m; kwds...) for _ in 1:n]
 
 
 # Type alias for a set of bitsets.
