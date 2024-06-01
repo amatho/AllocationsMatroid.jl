@@ -222,14 +222,14 @@ and `p₁, p₂, …` will be non-increasing.
 """
 function rand_matroid_coarsening(m, r; rng=default_rng())
     P = zeros(Int, r + 1)
-    diff = m - r - 1
+    diff = m - r
     if diff <= 0 || r == 0
         return P
     end
     remainder = diff - sum(P)
 
     for i in 2:r+1
-        x = rand(rng, 1:diff)
+        x = rand(rng, 1:remainder)
         P[i] = x
         remainder -= x
         if remainder <= 0
