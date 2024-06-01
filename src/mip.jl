@@ -1006,32 +1006,66 @@ function alloc_ggi(V, C=nothing; wt=wt_gini, solver=conf.MIP_SOLVER, kwds...)
 end
 
 
+"""
+    rand_priority_profile(n, m; rng=default_rng())
+
+Generate a random valuation profile, based on a random prioritization of the
+items. To ensure that the item priorities will overrule any other
+considerations, the valuation profile is filled using powers of 2. Therefore,
+this function does not work for values of `m` ≥ 63.
+"""
+function rand_priority_profile(n, m; rng=default_rng())
+
+    m < 63 || throw(DomainError(m, "number of items ≥ 63 is not supported"))
+
+    # Random permutation of the items for priority
+    π = randperm(rng, m)
+    # Fill the valuation matrix with ones, so that no item is unwanted
+    X = ones(n, m)
+
+    # Encode the item priorities in an additive profile matrix
+    for g in 1:m
+        i = rand(rng, 1:n)
+        X[i, g] = 2 ^ π[g]
+    end
+
+    return Profile(X)
+
+end
+
+
 function rand_mip_result(ctx)
     return (profile=ctx.profile, alloc=ctx.alloc, model=ctx.model, ctx.res...)
 end
 
 
+"""
+    alloc_rand_mip(V[, C]; solver=conf.MIP_SOLVER, rng=default_rng(),
+                   kwds...)
+
+Allocate items to agents randomly, in a similar manner to [`alloc_rand`](@ref).
+The implementation is inspired by the [randomized coloring procedure with
+symmetry-breaking](https://doi.org/10.1007/978-3-540-70575-8_26) of Pemmaraju
+and Srinivasan, and is generalized to work with any constraint that implements
+[`enforce`](@ref).
+
+The profile `V` is not used directly, other than to determine the number of
+agents and items.
+
+A random priority profile is generated using [`rand_priority_profile`](@ref),
+such that any constraints will remove the items with lowest priority first.
+To ensure that the MIP respects this priority profile, the utilitarian welfare
+of the allocation is maximized.
+
+$MIP_LIMIT_DOC
+"""
 function alloc_rand_mip(V, C=nothing; solver=conf.MIP_SOLVER, rng=default_rng(),
         kwds...)
 
-    n, m = na(V), ni(V)
-
-    # Tentative allocation
-    A = alloc_rand(n, m).alloc
-
-    π = randperm(rng, m)
-    π = 2 .^ π
-
-    X = ones(n, m)
-    for g in items(V), i in owners(A, g)
-        X[i, g] = π[g]
-    end
-
-    V = Profile(X)
-
-    init_mip(V, solver; kwds...) |>
+    init_mip(rand_priority_profile(na(V), ni(V), rng=rng), solver; kwds...) |>
     achieve_muw |>
     enforce(C) |>
     solve_mip |>
     rand_mip_result
+
 end

@@ -45,6 +45,7 @@ export
     alloc_mnw,
     alloc_mnw_ef1,
     alloc_rand,
+    alloc_rand_mip,
     bases,
     bundle,
     category!,
