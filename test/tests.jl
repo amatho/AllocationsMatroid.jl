@@ -695,10 +695,38 @@ end
 
     end
 
+    @testset "Random with optional constraints" begin
+
+        V = V₀
+
+        let res = alloc_rand_mip(V)
+
+            @test res.alloc isa Allocation
+            @test res.model isa JuMP.Model
+            @test na(res.alloc) == na(V)
+            @test ni(res.alloc) == ni(V)
+
+        end
+
+        C = rand_conflicts_er59(V)
+
+        let res = alloc_rand_mip(V, C, min_owners=0)
+
+            @test res.alloc isa Allocation
+            @test res.model isa JuMP.Model
+            @test na(res.alloc) == na(V)
+            @test ni(res.alloc) == ni(V)
+
+        end
+
+        @test_throws DomainError alloc_rand_mip(Profile(zeros(2, 63)))
+
+    end
+
     slow_tests &&
     @testset "limits, $func" for func in [
         alloc_ef1, alloc_efx, alloc_mnw, alloc_mnw_ef1, alloc_mm, alloc_ggi,
-        alloc_mms]
+        alloc_mms, alloc_rand_mip]
         # Could add `cutoff=true` for `alloc_mms`
 
         V = V₀
