@@ -156,6 +156,8 @@ Knuth's matroid construction (1974). Generates a matroid in terms of its closed
 sets, given by the size of the universe `m` and a list of enlargements `X`.
 """
 function knuth_matroid(m, X)
+    m <= 64 || throw(DomainError(m, "number of items > 64 is not supported"))
+
     r::Int = 1 # r is current rank +1 due to 1-indexing.
     F::Vector{Family} = [Family([SmallBitSet()])]
     E::SmallBitSet = SmallBitSet(1:m)
@@ -197,8 +199,17 @@ ground set of `1:m`.
 The keyword argument `r` specifies the possible values for the target rank of
 the matroid, and is by default `2:m÷2`. `track_indep` controls whether the
 matroid generation should keep track of independent sets under construction.
+
+!!! warning
+
+    This implementation uses [`SmallBitSet`](@ref), which is backed by a
+    `UInt64`, and therefore it does not support number of items `m` larger
+    than 64.
+
 """
 function rand_matroid_knu74(m; r=2:m÷2, track_indep=false, rng=default_rng())
+    m <= 64 || throw(DomainError(m, "number of items > 64 is not supported"))
+
     rr = rand(rng, r)
     P = rand_matroid_coarsening(m, rr, rng=rng)
 
@@ -474,6 +485,8 @@ This version assigns the Hamming weight of all subsets of E upfront. This is
 infeasible for values of n much larger than 16.
 """
 function knuth_matroid_erect(m, enlargements)
+    m <= 64 || throw(DomainError(m, "number of items > 64 is not supported"))
+
     # Initialize.
     r::Int = 1
     mask::SmallBitSet = SmallBitSet(1:m)
