@@ -1,11 +1,19 @@
 abstract type Matroid end
 
 
+Base.show(io::IO, M::Matroid) =
+    print(io, "$(nameof(typeof(M)))($(M.n), $(rank(M)))")
+
+Base.show(io::IO, ::MIME"text/plain", M::Matroid) =
+    print(io, "$(nameof(typeof(M))) with size $(M.n) and rank $(rank(M))")
+
+
 struct ClosedSetsMatroid <: Matroid
     n::Integer # Size of universe
     r::Integer # Final rank (r == length(F)).
     F::Vector{Set{SmallBitSet}} # Closed sets by rank
 end
+
 Base.copy(M::ClosedSetsMatroid) = ClosedSetsMatroid(M.n, M.r, M.F)
 
 
@@ -59,17 +67,13 @@ ground_set(M::GraphicMatroid) = BitSet(1:M.n)
 """
     is_indep(M::Matroid, S)
 
-Independence oracle. Determines whether S is independent in M.
+Determine whether the set `S` is independent in the matroid `M`.
 """
 function is_indep end
 
 
-"""
-    is_indep(M::ClosedSetsMatroid, S::Integer)
-
-Determines whether a given set S is independent in the matroid M, given by the
-closed sets of M grouped by rank. Uses (I.1) in Greene (1989).
-"""
+# Determines whether a given set S is independent in the matroid M, given by the
+# closed sets of M grouped by rank. Uses (I.1) in Greene (1989).
 function is_indep(M::ClosedSetsMatroid, S)
     t = length(S)
 
