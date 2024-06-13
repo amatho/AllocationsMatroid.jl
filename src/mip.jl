@@ -1046,8 +1046,7 @@ end
 Allocate items to agents randomly, in a similar manner to [`alloc_rand`](@ref).
 The implementation is inspired by the [randomized coloring procedure with
 symmetry-breaking](https://doi.org/10.1007/978-3-540-70575-8_26) of Pemmaraju
-and Srinivasan, and is generalized to work with any constraint that implements
-[`enforce`](@ref).
+and Srinivasan, and is generalized to work with any `Constraint`.
 
 The profile `V` is not used directly, other than to determine the number of
 agents and items.

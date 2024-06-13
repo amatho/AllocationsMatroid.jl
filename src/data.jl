@@ -224,13 +224,10 @@ rand_matroid_knu74(V::Profile; kwds...) = rand_matroid_knu74(ni(V); kwds...)
 rand_matroid_knu74(n, m; kwds...) = [rand_matroid_knu74(m; kwds...) for _ in 1:n]
 
 
-"""
-    rand_matroid_coarsening(m, r; rng=default_rng())
 
-Generate a random coarsening `P` that achieves the given rank `r` for a matroid
-of `m` items. The list `P = [p₀, p₁, …]` will be generated such that `p₀ = 0`,
-and `p₁, p₂, …` will be non-increasing.
-"""
+# Generate a random coarsening `P` that achieves the given rank `r` for a
+# matroid of `m` items. The list `P = [p₀, p₁, …]` will be generated such that
+# `p₀ = 0`, and `p₁, p₂, …` will be non-increasing.
 function rand_matroid_coarsening(m, r; rng=default_rng())
     P = zeros(Int, r + 1)
     diff = m - r
@@ -564,12 +561,8 @@ end
 knuth_matroid_erect(V::Profile, enlargements) = knuth_matroid_erect(ni(V), enlargements)
 
 
-"""
-    insert_set!(x, F, r, rank)
-
-Inserts set x into F[r+1], but augments x if it is necessary to ensure no two
-sets in F[r+1] have an intersection of rank greater than r.
-"""
+# Inserts set x into F[r+1], but augments x if it is necessary to ensure no two
+# sets in F[r+1] have an intersection of rank greater than r.
 function insert_set!(x, F, r, rank)
     for y in F[r+1] # +1 since Julia is 1-indexed.
         if rank[intersect(x, y)] < r
@@ -586,13 +579,9 @@ function insert_set!(x, F, r, rank)
 end
 
 
-"""
-    mark!(m, I, r, rank)
-
-Given a closed set m, sets rank[m']=r for all subsets m' ⊆ m whose rank is not
-already ≤ r, and adds m' to I if it is independent (that is, if its rank equals
-its cardinality).
-"""
+# Given a closed set m, sets rank[m']=r for all subsets m' ⊆ m whose rank is not
+# already ≤ r, and adds m' to I if it is independent (that is, if its rank equals
+# its cardinality).
 function mark!(m, I, r, rank)
     if haskey(rank, m) && rank[m] <= r
         return

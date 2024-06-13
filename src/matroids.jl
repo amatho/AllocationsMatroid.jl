@@ -117,8 +117,8 @@ end
 """
     rank(M::Matroid, S)
 
-Returns the rank of the set S in M, ie. the size of the largest independent
-subset of S.
+Returns the rank of the set `S` in `M`, i.e., the size of the largest
+independent subset of `S`.
 """
 function rank end
 
@@ -126,11 +126,6 @@ function rank end
 rank(M::Matroid) = M.r
 
 
-"""
-    function rank(M::ClosedSetsMatroid, S)
-
-Rank ``oracle''. Returns the rank of the set S in the matroid M.
-"""
 function rank(M::ClosedSetsMatroid, S)
     for (r, Fr) in enumerate(M.F), B ∈ Fr
         if issubset(S, B)
@@ -158,17 +153,13 @@ rank(M::GraphicMatroid, S) = length(S) > 0 ? length(minimal_spanning_subset(M, S
 """
     is_circuit(M::Matroid, S)
 
-Determines whether S is a circuit in M (ie. rank(M, S) = |S|-1).
+Determines whether `S` is a circuit in `M` (i.e., `rank(M, S) == length(S) - 1`).
 """
 function is_circuit end
 
 
-"""
-    function is_circuit(M::ClosedSetsMatroid, S::Integer)
-
-Determines whether a given set S is a circuit in the matroid M, given by the
-closed sets of M. Uses (C.1) and (C.2) in Greene (1989).
-"""
+# Determines whether `S` is a circuit in the matroid, using (C.1) and (C.2) in
+# Greene (1989).
 function is_circuit(M::ClosedSetsMatroid, S)
     t = length(S)
 
@@ -204,25 +195,17 @@ end
 """
     minimal_spanning_subset(M::Matroid, S)
 
-Finds a minimal spanning subset of S in M. If S is the ground set of M, this
-produces a basis of M.
+Finds a minimal spanning subset of `S` in `M`. If `S` is the ground set of `M`,
+this produces a basis of `M`.
 """
 function minimal_spanning_subset end
 
 
-"""
-    function minimal_spanning_subset(M::ClosedSetsMatroid, A::Integer)
-
-Algorithm 3.1 from Greene (1989). Given a matroid M = (E, F) and some subset A
-of E, finds a minimal spanning subset of A. If A = E, this finds a basis of M.
-If A is a basis, this finds A.
-"""
 minimal_spanning_subset(M::ClosedSetsMatroid, A) = _mss(M, 0, A)
-
-
 minimal_spanning_subset(M::FullMatroid, A) = _mss(M, 0, A)
 
 
+# Algorithm 3.1 from Greene (1989)
 function _mss(M::Union{ClosedSetsMatroid,FullMatroid}, j::Integer, A)
     B = [intersect(F, A) for F in M.F[j+1] if length(intersect(F, A)) > j]
 
@@ -242,11 +225,7 @@ end
 minimal_spanning_subset(M::UniformMatroid, S) = throw("unimplemented")
 
 
-"""
-    minimal_spanning_subset(M::GraphicMatroid, S)
-
-Uses Kruskal's algorithm to find a minimal spanning tree over M.G.
-"""
+# Uses Kruskal's algorithm to find a minimal spanning tree over M.G.
 function minimal_spanning_subset(M::GraphicMatroid, S)
     edgelist = [e for (i, e) in enumerate(edges(M.g)) if i in S]
     subgraph, _vmap = induced_subgraph(M.g, edgelist)
@@ -254,19 +233,12 @@ function minimal_spanning_subset(M::GraphicMatroid, S)
 end
 
 
-"""
-    function minimal_spanning_subsets(M::ClosedSetsMatroid, A::Integer)
-
-A modification of Algorithm 3.1 from Greene (1989) that finds all minimal
-spanning subsets of A ⊆ E, given a matroid M = (E, F). If A = E, this finds the
-bases of M.
-"""
 minimal_spanning_subsets(M::ClosedSetsMatroid, A) = _mss_all(M, 0, A)
-
-
 minimal_spanning_subsets(M::FullMatroid, A) = _mss_all(M, 0, A)
 
 
+# A modification of Algorithm 3.1 from Greene (1989) that finds all minimal
+# spanning subsets of A ⊆ E.
 function _mss_all(M, j::Integer, A)
     B = [intersect(F, A) for F in M.F[j+1] if length(intersect(F, A)) > j]
 
@@ -302,7 +274,7 @@ minimal_spanning_subsets(M::GraphicMatroid, A) = throw("unimplemented")
 """
     bases(M::Matroid)
 
-Finds the set of bases of M.
+Finds the set of bases of the matroid `M`.
 """
 function bases end
 
@@ -311,16 +283,22 @@ bases(M::ClosedSetsMatroid) = _mss_all(M, 0, ground_set(M))
 bases(M::FullMatroid) = _mss_all(M, 0, ground_set(M))
 
 
-bases(M::UniformMatroid) = throw("unimplemented")
+function bases(M::UniformMatroid)
+    M.n < 64 || throw(DomainError(M.n, "matroid size >= 64 is not supported"))
+    return [bits_to_set(i) for i in 1:(2^M.n - 1) if count_ones(i) == M.r]
+end
+
+
 bases(M::GraphicMatroid) = throw("unimplemented")
 
 
 """
     closure(M::Matroid, S)
 
-Finds the closure of a set S in M, that, when given a set S ⊆ E, returns the set
-of elements in x ∈ E such that x can be added to S with no increase in rank. It
-returns the closed set of the same rank as S, that contains S.
+Returns the closure of a set `S` in the matroid `M`.
+
+Given a set `S ⊆ E`, add all elements `x ∈ E` such that `S` has no increase in
+rank.
 """
 function closure end
 
@@ -353,4 +331,86 @@ function closure(M::GraphicMatroid, S)
 end
 
 
+"""
+    is_closed(M::Matroid, S)
+
+Returns `true` if the given set `S` is closed in the matroid `M`, i.e., if the
+closure of `S` is equal to itself.
+"""
 is_closed(M::Matroid, S) = closure(M, S) == S
+
+
+## Tests for the axioms for the closed sets of a matroid, as given by Knuth
+## (1974).
+
+
+"""
+    matroid_c1(M::Union{ClosedSetsMatroid, FullMatroid})
+
+The first axiom for a matroid defined by closed sets, as described in [Knuth's
+1974 paper](https://doi.org/10.1016/0012-365X(75)90075-8):
+
+> The ground set is closed. \$E ∈ F\$.
+"""
+function matroid_c1(M::Union{ClosedSetsMatroid,FullMatroid})
+    last(M.F) == Set((ground_set(M),))
+end
+
+
+"""
+    matroid_c2(M::Union{ClosedSetsMatroid, FullMatroid})
+
+The second axiom for a matroid defined by closed sets, as described in [Knuth's
+1974 paper](https://doi.org/10.1016/0012-365X(75)90075-8):
+
+> The intersection of two closed sets is a closed set. If \$A, B ∈ F\$, then
+> \$A ∩ B ∈ F\$.
+"""
+function matroid_c2(M::Union{ClosedSetsMatroid,FullMatroid})
+    F = reduce(∪, M.F)
+    for A ∈ F
+        for B ∈ F
+            if !(intersect(A, B) in F)
+                return false
+            end
+        end
+    end
+    return true
+end
+
+
+"""
+    matroid_c3(M::Union{ClosedSetsMatroid, FullMatroid})
+
+The third axiom for a matroid defined by closed sets, as described in [Knuth's
+1974 paper](https://doi.org/10.1016/0012-365X(75)90075-8):
+
+> If \$A ∈ F\$ and \$a, b ∈ E - A\$, then \$b\$ is a member of all sets
+> containing \$A ∪ {a}\$ if and only if \$a\$ is a member of all sets containing
+> \$A ∪ {b}\$.
+"""
+function matroid_c3(M::Union{ClosedSetsMatroid,FullMatroid})
+    E = ground_set(M)
+    F = reduce(∪, M.F)
+    delete!(F, SmallBitSet())
+    for A ∈ F
+        t1 = setdiff(E, A)
+        while !isempty(t1)
+            a = minimum(t1)
+            t2 = setdiff(t1, a)
+            while !isempty(t2)
+                b = minimum(t2)
+                ā = reduce(intersect, [B for B in F if issubset(union(A, a), B)])
+                b̄ = reduce(intersect, [B for B in F if issubset(union(A, b), B)])
+
+                if issubset(b, ā) != issubset(a, b̄)
+                    return false
+                end
+
+                delete!(t2, b)
+            end
+            delete!(t1, a)
+        end
+    end
+    return true
+end

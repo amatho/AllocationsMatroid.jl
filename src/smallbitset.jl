@@ -2,9 +2,19 @@ mutable struct SmallBitSet <: AbstractSet{Int}
     bits::UInt64
 
     SmallBitSet() = new(0)
-    SmallBitSet(bits::UInt64) = new(bits)
 end
 
+"""
+    SmallBitSet([itr])
+
+Construct a set represented by a bit string (like Julia's `BitSet`) backed by a
+single `UInt64`, in order to achieve a smaller memory size.
+
+!!! warning
+
+    Since this implementation uses a single `UInt64`, storing integers outside
+    of the range `1:64` is not supported.
+"""
 SmallBitSet(itr) = union!(SmallBitSet(), itr)
 
 function Base.empty!(s::SmallBitSet)
@@ -18,7 +28,13 @@ function Base.copy!(dest::SmallBitSet, src::SmallBitSet)
     dest.bits = src.bits
     return dest
 end
-Base.copy(s::SmallBitSet) = SmallBitSet(s.bits)
+
+function Base.copy(s::SmallBitSet)
+    s2 = SmallBitSet()
+    s2.bits = s.bits
+    return s2
+end
+
 Base.copymutable(s::SmallBitSet) = copy(s)
 
 function Base.length(s::SmallBitSet)
@@ -75,7 +91,7 @@ function Base.intersect!(s1::SmallBitSet, s2::SmallBitSet)
     return s1
 end
 
-Base.intersect(s1::SmallBitSet, s2::SmallBitSet) = SmallBitSet(s1.bits & s2.bits)
+Base.intersect(s1::SmallBitSet, s2::SmallBitSet) = intersect!(copy(s1), s2)
 
 function Base.setdiff!(s1::SmallBitSet, s2::SmallBitSet)
     s1.bits &= ~s2.bits
