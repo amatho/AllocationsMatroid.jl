@@ -29,12 +29,7 @@ function Base.copy!(dest::SmallBitSet, src::SmallBitSet)
     return dest
 end
 
-function Base.copy(s::SmallBitSet)
-    s2 = SmallBitSet()
-    s2.bits = s.bits
-    return s2
-end
-
+Base.copy(s::SmallBitSet) = copy!(SmallBitSet(), s)
 Base.copymutable(s::SmallBitSet) = copy(s)
 
 function Base.length(s::SmallBitSet)

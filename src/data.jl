@@ -224,7 +224,6 @@ rand_matroid_knu74(V::Profile; kwds...) = rand_matroid_knu74(ni(V); kwds...)
 rand_matroid_knu74(n, m; kwds...) = [rand_matroid_knu74(m; kwds...) for _ in 1:n]
 
 
-
 # Generate a random coarsening `P` that achieves the given rank `r` for a
 # matroid of `m` items. The list `P = [p₀, p₁, …]` will be generated such that
 # `p₀ = 0`, and `p₁, p₂, …` will be non-increasing.
