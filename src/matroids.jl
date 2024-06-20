@@ -201,8 +201,8 @@ this produces a basis of `M`.
 function minimal_spanning_subset end
 
 
-minimal_spanning_subset(M::ClosedSetsMatroid, A) = _mss(M, 0, A)
-minimal_spanning_subset(M::FullMatroid, A) = _mss(M, 0, A)
+minimal_spanning_subset(M::ClosedSetsMatroid, S) = _mss(M, 0, S)
+minimal_spanning_subset(M::FullMatroid, S) = _mss(M, 0, S)
 
 
 # Algorithm 3.1 from Greene (1989)
@@ -222,19 +222,32 @@ function _mss(M::Union{ClosedSetsMatroid,FullMatroid}, j::Integer, A)
 end
 
 
-minimal_spanning_subset(M::UniformMatroid, S) = throw("unimplemented")
+minimal_spanning_subset(M::UniformMatroid, S) = Set(collect(S)[1:min(end, M.r)])
 
 
 # Uses Kruskal's algorithm to find a minimal spanning tree over M.G.
 function minimal_spanning_subset(M::GraphicMatroid, S)
+    edgemap = Dict(e => i for (i, e) in enumerate(edges(M.g)))
     edgelist = [e for (i, e) in enumerate(edges(M.g)) if i in S]
-    subgraph, _vmap = induced_subgraph(M.g, edgelist)
-    return kruskal_mst(subgraph)
+    subgraph, vmap = induced_subgraph(M.g, edgelist)
+    mst = kruskal_mst(subgraph)
+    return Set([edgemap[Edge(vmap[e.src], vmap[e.dst])] for e in mst])
 end
 
 
-minimal_spanning_subsets(M::ClosedSetsMatroid, A) = _mss_all(M, 0, A)
-minimal_spanning_subsets(M::FullMatroid, A) = _mss_all(M, 0, A)
+"""
+    minimal_spanning_subsets(M::Matroid, S)
+
+Finds all minimal spanning subsets of `S` in `M`. If `S` is the ground set of
+`M`, this finds all the bases of `M`.
+
+See also [`bases`](@ref).
+"""
+function minimal_spanning_subsets end
+
+
+minimal_spanning_subsets(M::ClosedSetsMatroid, S) = _mss_all(M, 0, S)
+minimal_spanning_subsets(M::FullMatroid, S) = _mss_all(M, 0, S)
 
 
 # A modification of Algorithm 3.1 from Greene (1989) that finds all minimal
@@ -246,9 +259,7 @@ function _mss_all(M, j::Integer, A)
         if j >= length(A) - 1
             # Make sure to add A to a new set, without flattening (since A is
             # already a set)
-            S = Set{AbstractSet{Int}}()
-            push!(S, A)
-            return S
+            return Set([A])
         end
 
         j += 1
@@ -267,8 +278,16 @@ function _mss_all(M, j::Integer, A)
 end
 
 
-minimal_spanning_subsets(M::UniformMatroid, A) = throw("unimplemented")
-minimal_spanning_subsets(M::GraphicMatroid, A) = throw("unimplemented")
+function minimal_spanning_subsets(M::UniformMatroid, S)
+    M.n < 64 || throw(DomainError(M.n, "matroid size >= 64 is not supported"))
+    len = min(length(S), M.r)
+    mask = set_to_bits(S)
+    return Set([bits_to_set(i) for i in (2^len - 1):(2^M.n - 1)
+                if count_ones(i) == len && i & mask == i])
+end
+
+
+minimal_spanning_subsets(M::GraphicMatroid, S) = throw("unimplemented")
 
 
 """
@@ -285,7 +304,7 @@ bases(M::FullMatroid) = _mss_all(M, 0, ground_set(M))
 
 function bases(M::UniformMatroid)
     M.n < 64 || throw(DomainError(M.n, "matroid size >= 64 is not supported"))
-    return [bits_to_set(i) for i in 1:(2^M.n - 1) if count_ones(i) == M.r]
+    return Set([bits_to_set(i) for i in 1:(2^M.n - 1) if count_ones(i) == M.r])
 end
 
 
@@ -326,8 +345,9 @@ closure(M::UniformMatroid, S) = length(S) < M.r ? S : ground_set(M)
 
 function closure(M::GraphicMatroid, S)
     edgelist = [e for (i, e) in enumerate(edges(M.g)) if i in S]
-    _sg, vmap = induced_subgraph(M.g, edgelist)
-    return [e for e in edges(M.g) if [e.src, e.dst] ⊆ vmap || e.src == e.dst]
+    _, vmap = induced_subgraph(M.g, edgelist)
+    return Set([i for (i, e) in enumerate(edges(M.g))
+                if [e.src, e.dst] ⊆ vmap || e.src == e.dst])
 end
 
 
