@@ -227,11 +227,15 @@ minimal_spanning_subset(M::UniformMatroid, S) = Set(collect(S)[1:min(end, M.r)])
 
 # Uses Kruskal's algorithm to find a minimal spanning tree over M.G.
 function minimal_spanning_subset(M::GraphicMatroid, S)
-    edgemap = Dict(e => i for (i, e) in enumerate(edges(M.g)))
+    # Maintain a map for converting edges to the corresponding items, while
+    # ignoring the order of the vertices in the edge
+    edgemap = Dict(Set([e.src, e.dst]) => i
+                   for (i, e) in enumerate(edges(M.g)))
     edgelist = [e for (i, e) in enumerate(edges(M.g)) if i in S]
     subgraph, vmap = induced_subgraph(M.g, edgelist)
     mst = kruskal_mst(subgraph)
-    return Set([edgemap[Edge(vmap[e.src], vmap[e.dst])] for e in mst])
+    # Convert edges back into items
+    return Set([edgemap[Set([vmap[e.src], vmap[e.dst]])] for e in mst])
 end
 
 
