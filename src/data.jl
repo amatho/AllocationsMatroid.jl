@@ -119,7 +119,6 @@ rand_conflicts_ba02(V::Profile; kwds...) = rand_conflicts_ba02(ni(V); kwds...)
 """
     rand_matroid_er59(m; n=nothing, rng=default_rng())
     rand_matroid_er59(V::Profile; ...)
-    rand_matroid_er59(n, m; ...)
 
 Generate a random `GraphicMatroid`, whose underlying graph is constructed
 according to the [Erdős–Rényi model
@@ -141,7 +140,17 @@ function rand_matroid_er59(m; verts=nothing, rng=default_rng())
 end
 
 rand_matroid_er59(V::Profile; kwds...) = rand_matroid_er59(ni(V); kwds...)
-rand_matroid_er59(n, m; kwds...) = [rand_matroid_er59(m; kwds...) for _ in 1:n]
+
+
+"""
+    rand_matroid_er59_asym(n, m; kwds...)
+
+Generate a random `Matroid` for each agent `n`.
+
+See [`rand_matroid_er59`](@ref) for the supported keyword arguments.
+"""
+rand_matroid_er59_asym(n, m; kwds...) =
+    [rand_matroid_er59(m; kwds...) for _ in 1:n]
 
 
 # Type alias for a set of bitsets.
@@ -190,7 +199,6 @@ knuth_matroid(V::Profile, X) = knuth_matroid(ni(V), X)
 """
     rand_matroid_knu75(m; r=2:m÷2, track_indep=false, rng=default_rng())
     rand_matroid_knu75(V::Profile; ...)
-    rand_matroid_knu75(n, m; ...)
 
 Generate a random `Matroid` based on the process described in [Knuth's 1975
 paper](https://doi.org/10.1016/0012-365X(75)90075-8). The matroid will have a
@@ -221,7 +229,17 @@ function rand_matroid_knu75(m; r=2:m÷2, track_indep=false, rng=default_rng())
 end
 
 rand_matroid_knu75(V::Profile; kwds...) = rand_matroid_knu75(ni(V); kwds...)
-rand_matroid_knu75(n, m; kwds...) = [rand_matroid_knu75(m; kwds...) for _ in 1:n]
+
+
+"""
+    rand_matroid_knu75_asym(n, m; kwds...)
+
+Generate a random `Matroid` for each agent `n`.
+
+See [`rand_matroid_knu75`](@ref) for the supported keyword arguments.
+"""
+rand_matroid_knu75_asym(n, m; kwds...) =
+    [rand_matroid_knu75(m; kwds...) for _ in 1:n]
 
 
 # Generate a random coarsening `P` that achieves the given rank `r` for a
