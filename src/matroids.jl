@@ -73,7 +73,7 @@ function is_indep end
 
 
 # Determines whether a given set S is independent in the matroid M, given by the
-# closed sets of M grouped by rank. Uses (I.1) in Greene (1989).
+# closed sets of M grouped by rank. Uses (I.1) in Greene (1991).
 function is_indep(M::ClosedSetsMatroid, S)
     t = length(S)
 
@@ -159,25 +159,17 @@ function is_circuit end
 
 
 # Determines whether `S` is a circuit in the matroid, using (C.1) and (C.2) in
-# Greene (1989).
+# Greene (1991).
 function is_circuit(M::ClosedSetsMatroid, S)
     t = length(S)
 
-    for F in M.F[t] # (C.1) S ⊆ F for some F ∈ F_{t-1}.
-        if issubset(S, F)
-            @goto C2
-        end
-    end
-    return false
+    # (C.1) S ⊆ F for some F ∈ F_{t-1}.
+    # t equals t-1 due to 1-indexing.
+    any(F -> issubset(S, F), M.F[t]) || return false
 
-    @label C2
-    for F in M.F[t-1] # (C.2) |S ∩ F| ≤ r(F) for all F ∈ F_{t-2}.
-        if length(intersect(S, F)) > t - 2
-            return false
-        end
-    end
-
-    return true
+    # (C.2) |S ∩ F| ≤ r(F) for all F ∈ F_{t-2}.
+    # t-1 equals t-2 due to 1-indexing.
+    return all(F -> length(intersect(S, F)) <= t - 2, M.F[t-1])
 end
 
 
@@ -205,7 +197,7 @@ minimal_spanning_subset(M::ClosedSetsMatroid, S) = _mss(M, 0, S)
 minimal_spanning_subset(M::FullMatroid, S) = _mss(M, 0, S)
 
 
-# Algorithm 3.1 from Greene (1989)
+# Algorithm 3.1 from Greene (1991)
 function _mss(M::Union{ClosedSetsMatroid,FullMatroid}, j::Integer, A)
     B = [intersect(F, A) for F in M.F[j+1] if length(intersect(F, A)) > j]
 
@@ -254,7 +246,7 @@ minimal_spanning_subsets(M::ClosedSetsMatroid, S) = _mss_all(M, 0, S)
 minimal_spanning_subsets(M::FullMatroid, S) = _mss_all(M, 0, S)
 
 
-# A modification of Algorithm 3.1 from Greene (1989) that finds all minimal
+# A modification of Algorithm 3.1 from Greene (1991) that finds all minimal
 # spanning subsets of A ⊆ E.
 function _mss_all(M, j::Integer, A)
     B = [intersect(F, A) for F in M.F[j+1] if length(intersect(F, A)) > j]
@@ -361,7 +353,7 @@ end
 Returns `true` if the given set `S` is closed in the matroid `M`, i.e., if the
 closure of `S` is equal to itself.
 """
-is_closed(M::Matroid, S) = closure(M, S) == S
+is_closed(M::Matroid, S) = issetequal(closure(M, S), S)
 
 
 ## Tests for the axioms for the closed sets of a matroid, as given by Knuth
