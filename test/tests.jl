@@ -2,6 +2,7 @@ import JuMP
 using Allocations
 using Graphs
 using Random: seed!, randperm, Xoshiro
+using Supposition
 using Test
 
 # For utilities tests:
@@ -20,6 +21,15 @@ using Allocations: matroid_partition_knuth73, find_shortest_path,
 
 # Shorthand for matroid tests:
 const btos = Allocations.bits_to_set
+
+
+function gen_matroid(m, r)
+    rand_matroid_knu74(m, r=r:r)
+end
+
+itemgen = Data.Integers(1, 10)
+rankgen = Data.Integers(1, 10)
+matroidgen = @composed gen_matroid(itemgen, rankgen)
 
 
 function runtests(; slow_tests = true)
@@ -1349,17 +1359,11 @@ end
         @test result[5] == F4
     end
 
-    @testset "Random matroid generation" begin
-        Ms = []
-        append!(Ms, rand_matroid_knu74(10, 10, track_indep=false))
-        append!(Ms, rand_matroid_knu74(10, 10, track_indep=true))
-
-        # Check axioms for full and closed matroids.
-        for M in Ms
-            @test matroid_c1(M)
-            @test matroid_c2(M)
-            @test matroid_c3(M)
-        end
+    @testset "Random matroid properties" begin
+        max_ex = 1_000
+        @check max_examples=max_ex matroid_c1(matroidgen)
+        @check max_examples=max_ex matroid_c2(matroidgen)
+        @check max_examples=max_ex matroid_c3(matroidgen)
     end
 
 end
