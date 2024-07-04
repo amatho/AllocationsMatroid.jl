@@ -152,7 +152,7 @@ const Family = Set{SmallBitSet}
     knuth_matroid(m, X)
     knuth_matroid(V::Profile, X)
 
-Knuth's matroid construction (1974). Generates a matroid in terms of its closed
+Knuth's matroid construction (1975). Generates a matroid in terms of its closed
 sets, given by the size of the universe `m` and a list of enlargements `X`.
 """
 function knuth_matroid(m, X)
@@ -188,11 +188,11 @@ knuth_matroid(V::Profile, X) = knuth_matroid(ni(V), X)
 
 
 """
-    rand_matroid_knu74(m; r=2:m÷2, track_indep=false, rng=default_rng())
-    rand_matroid_knu74(V::Profile; ...)
-    rand_matroid_knu74(n, m; ...)
+    rand_matroid_knu75(m; r=2:m÷2, track_indep=false, rng=default_rng())
+    rand_matroid_knu75(V::Profile; ...)
+    rand_matroid_knu75(n, m; ...)
 
-Generate a random `Matroid` based on the process described in [Knuth's 1974
+Generate a random `Matroid` based on the process described in [Knuth's 1975
 paper](https://doi.org/10.1016/0012-365X(75)90075-8). The matroid will have a
 ground set of `1:m`.
 
@@ -207,21 +207,21 @@ matroid generation should keep track of independent sets under construction.
     than 64.
 
 """
-function rand_matroid_knu74(m; r=2:m÷2, track_indep=false, rng=default_rng())
+function rand_matroid_knu75(m; r=2:m÷2, track_indep=false, rng=default_rng())
     m <= 64 || throw(DomainError(m, "number of items > 64 is not supported"))
 
     rr = rand(rng, r)
     P = rand_matroid_coarsening(m, rr, rng=rng)
 
     if track_indep
-        return _rand_matroid_knu74_full(m, P, rng=rng)
+        return _rand_matroid_knu75_full(m, P, rng=rng)
     else
-        return _rand_matroid_knu74_closed(m, P, rng=rng)
+        return _rand_matroid_knu75_closed(m, P, rng=rng)
     end
 end
 
-rand_matroid_knu74(V::Profile; kwds...) = rand_matroid_knu74(ni(V); kwds...)
-rand_matroid_knu74(n, m; kwds...) = [rand_matroid_knu74(m; kwds...) for _ in 1:n]
+rand_matroid_knu75(V::Profile; kwds...) = rand_matroid_knu75(ni(V); kwds...)
+rand_matroid_knu75(n, m; kwds...) = [rand_matroid_knu75(m; kwds...) for _ in 1:n]
 
 
 # Generate a random coarsening `P` that achieves the given rank `r` for a
@@ -254,7 +254,7 @@ function rand_matroid_coarsening(m, r; rng=default_rng())
 end
 
 
-function _rand_matroid_knu74_closed(m, P; rng=default_rng())
+function _rand_matroid_knu75_closed(m, P; rng=default_rng())
     r::Int = 1
     F::Vector{Family} = [Family([SmallBitSet()])]
     E::SmallBitSet = SmallBitSet(1:m)
@@ -280,7 +280,7 @@ function _rand_matroid_knu74_closed(m, P; rng=default_rng())
 end
 
 
-function _rand_matroid_knu74_full(m, P; rng=default_rng())
+function _rand_matroid_knu75_full(m, P; rng=default_rng())
     r::Int = 1
     E::SmallBitSet = SmallBitSet(1:m)
     rank::Dict{SmallBitSet,Int} = Dict(SmallBitSet() => 0)

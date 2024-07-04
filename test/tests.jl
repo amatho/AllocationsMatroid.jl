@@ -24,7 +24,7 @@ const btos = Allocations.bits_to_set
 
 
 function gen_matroid(m, r)
-    rand_matroid_knu74(m, r=r:r)
+    rand_matroid_knu75(m, r=r:r)
 end
 
 itemgen = Data.Integers(1, 10)
@@ -1195,7 +1195,7 @@ end
     end
 
     @testset "ClosedSetsMatroid properties" begin
-        # The example from Knuth (1974) section 3.
+        # The example from Knuth (1975) section 3.
         n = 10                                    # 134   159    256   358    379    238
         enlargements = [nothing, [btos(x) for x in [0x1a, 0x222, 0x64, 0x128, 0x288, 0x10c]]]
         M = knuth_matroid(n, enlargements)
@@ -1244,7 +1244,7 @@ end
     end
 
     @testset "FullMatroid properties" begin
-        # The example from Knuth (1974) section 3.
+        # The example from Knuth (1975) section 3.
         n = 10                  # 134   159    256   358    379    238
         enlargements = [nothing, [btos(x) for x in [0x1a, 0x222, 0x64, 0x128, 0x288, 0x10c]]]
         M = knuth_matroid_erect(n, enlargements)
@@ -1293,7 +1293,7 @@ end
     end
 
     @testset "knuth_matroid_erect" begin
-        # The example from Knuth (1974) section 3.
+        # The example from Knuth (1975) section 3.
         n = 10
         enlargements = [nothing, [btos(x) for x in [0x1a, 0x222, 0x64, 0x128, 0x288, 0x10c]]]
 
@@ -1328,7 +1328,7 @@ end
     end
 
     @testset "Pi-based KMC example" begin
-        # The example from Knuth (1974) section 3.
+        # The example from Knuth (1975) section 3.
         n = 10
         enlargements = [nothing, [btos(x) for x in [0x1a, 0x222, 0x64, 0x128, 0x288, 0x10c]]]
 

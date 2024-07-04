@@ -86,7 +86,7 @@ export
     rand_conflicts_er59,
     rand_conflicts_ws98,
     rand_matroid_er59,
-    rand_matroid_knu74,
+    rand_matroid_knu75,
     rand_profile,
     rank,
     required,

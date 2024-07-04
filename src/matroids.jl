@@ -357,14 +357,14 @@ is_closed(M::Matroid, S) = issetequal(closure(M, S), S)
 
 
 ## Tests for the axioms for the closed sets of a matroid, as given by Knuth
-## (1974).
+## (1975).
 
 
 """
     matroid_c1(M::Union{ClosedSetsMatroid, FullMatroid})
 
 The first axiom for a matroid defined by closed sets, as described in [Knuth's
-1974 paper](https://doi.org/10.1016/0012-365X(75)90075-8):
+1975 paper](https://doi.org/10.1016/0012-365X(75)90075-8):
 
 > The ground set is closed. \$E ∈ F\$.
 """
@@ -377,7 +377,7 @@ end
     matroid_c2(M::Union{ClosedSetsMatroid, FullMatroid})
 
 The second axiom for a matroid defined by closed sets, as described in [Knuth's
-1974 paper](https://doi.org/10.1016/0012-365X(75)90075-8):
+1975 paper](https://doi.org/10.1016/0012-365X(75)90075-8):
 
 > The intersection of two closed sets is a closed set. If \$A, B ∈ F\$, then
 > \$A ∩ B ∈ F\$.
@@ -399,7 +399,7 @@ end
     matroid_c3(M::Union{ClosedSetsMatroid, FullMatroid})
 
 The third axiom for a matroid defined by closed sets, as described in [Knuth's
-1974 paper](https://doi.org/10.1016/0012-365X(75)90075-8):
+1975 paper](https://doi.org/10.1016/0012-365X(75)90075-8):
 
 > If \$A ∈ F\$ and \$a, b ∈ E - A\$, then \$b\$ is a member of all sets
 > containing \$A ∪ {a}\$ if and only if \$a\$ is a member of all sets containing
